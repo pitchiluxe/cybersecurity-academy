@@ -68,3 +68,30 @@ body {
   background: var(--bg);
   color: var(--ink);
 }
+
+@font-face { font-family: "Bricolage Grotesque"; src: url("/fonts/BricolageGrotesque-Bold.ttf") format("truetype"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Work Sans"; src: url("/fonts/WorkSans-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Work Sans"; src: url("/fonts/WorkSans-Bold.ttf") format("truetype"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("/fonts/JetBrainsMono-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("/fonts/JetBrainsMono-Bold.ttf") format("truetype"); font-weight: 700; font-display: swap; }
+
+body { font-family: "Work Sans", system-ui, sans-serif; }
+.font-display { font-family: "Bricolage Grotesque", serif; }
+.font-mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.pill-warn { background: var(--warn-soft); color: var(--warn); border-color: var(--warn-line); }
+.pill-good { background: var(--good-soft); color: var(--good); border-color: var(--good-line); }
