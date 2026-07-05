@@ -50,7 +50,7 @@ export async function callOpenRouter(messages: ChatMessage[]): Promise<string> {
     );
   }
 
-  const data = await response.json();
+  const data = await response.json().catch(() => ({}));
   const content = data?.choices?.[0]?.message?.content;
   if (typeof content !== "string") {
     throw new OpenRouterRequestError(502, "OpenRouter response had no message content");

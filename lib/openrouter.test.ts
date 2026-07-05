@@ -60,4 +60,16 @@ describe("callOpenRouter", () => {
       status: 429,
     });
   });
+
+  it("throws OpenRouterRequestError when a 2xx response body fails to parse as JSON", async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => {
+        throw new SyntaxError("Unexpected end of JSON input");
+      },
+    });
+
+    await expect(callOpenRouter([{ role: "user", content: "hi" }])).rejects.toBeInstanceOf(OpenRouterRequestError);
+  });
 });
