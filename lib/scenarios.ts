@@ -35,7 +35,10 @@ Respond with ONLY a JSON object, no prose, no markdown fences, matching exactly 
   "rootCause": "string, the underlying technical cause — the trainee must never see this directly",
   "openingMessage": "string, the end-user's first message describing the problem in their own words, 2-4 sentences, no jargon"
 }`;
-  return [{ role: "system", content: system }];
+  return [
+    { role: "system", content: system },
+    { role: "user", content: "Generate the scenario now." },
+  ];
 }
 
 function transcriptToTurns(transcript: TranscriptMessage[]): ChatMessage[] {
