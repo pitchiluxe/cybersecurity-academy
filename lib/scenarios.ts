@@ -51,6 +51,25 @@ Respond with ONLY a JSON object, no prose, no markdown fences, matching exactly 
   ];
 }
 
+export function buildQueueMessages(count: number): ChatMessage[] {
+  const categoryList = SCENARIO_CATEGORIES.map((c) => `"${c.id}" (${c.label})`).join(", ");
+  const system = `You are generating a queue of ${count} training tickets for an IT helpdesk trainee.
+The available categories are: ${categoryList}.
+Invent ${count} plausible, specific, non-generic end-user personas and problems, spread roughly evenly across all six categories — do not use the same category more than twice. Make up a name, department, device/OS, and a concrete root cause a real technician could diagnose from symptoms alone for each one.
+Respond with ONLY a JSON array of ${count} objects, no prose, no markdown fences, where each object matches exactly this shape:
+{
+  "category": "one of the category ids listed above, exactly as written",
+  "persona": { "name": "string", "department": "string" },
+  "environment": { "os": "string", "device": "string", "detail": "string" },
+  "rootCause": "string, the underlying technical cause — the trainee must never see this directly",
+  "openingMessage": "string, the end-user's first message describing the problem in their own words, 2-4 sentences, no jargon"
+}`;
+  return [
+    { role: "system", content: system },
+    { role: "user", content: "Generate the ticket queue now." },
+  ];
+}
+
 function transcriptToTurns(transcript: TranscriptMessage[]): ChatMessage[] {
   return transcript.map((m) => ({
     role: m.role === "enduser" ? "assistant" : "user",

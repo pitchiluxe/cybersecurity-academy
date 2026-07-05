@@ -1,4 +1,4 @@
-import { extractJsonFromText, parseScenarioSeed, parseGradeResult, ParseError } from "./parsing";
+import { extractJsonFromText, parseScenarioSeed, parseScenarioQueue, parseGradeResult, ParseError } from "./parsing";
 
 describe("extractJsonFromText", () => {
   it("returns the text unchanged when it is already bare JSON", () => {
@@ -48,6 +48,52 @@ describe("parseScenarioSeed", () => {
       // rootCause missing
     });
     expect(() => parseScenarioSeed(missingField, "network")).toThrow(ParseError);
+  });
+});
+
+describe("parseScenarioQueue", () => {
+  const isValidCategory = (v: string) => ["network", "printer"].includes(v);
+
+  const validPayload = JSON.stringify([
+    {
+      category: "network",
+      persona: { name: "Maria Chen", department: "Marketing" },
+      environment: { os: "Windows 11", device: "Latitude 5540", detail: "GlobalProtect 6.2.1" },
+      rootCause: "TAP adapter driver corrupted by cumulative update",
+      openingMessage: "My VPN won't connect this morning.",
+    },
+    {
+      category: "printer",
+      persona: { name: "Alex Kim", department: "Finance" },
+      environment: { os: "macOS 14", device: "MacBook Pro", detail: "n/a" },
+      rootCause: "Print spooler service crashed",
+      openingMessage: "Nothing prints, the queue just sits there.",
+    },
+  ]);
+
+  it("parses a valid array into ScenarioSeed entries using each item's own category", () => {
+    const seeds = parseScenarioQueue(validPayload, isValidCategory);
+    expect(seeds).toHaveLength(2);
+    expect(seeds[0].category).toBe("network");
+    expect(seeds[1].category).toBe("printer");
+    expect(seeds[1].persona.name).toBe("Alex Kim");
+  });
+
+  it("throws ParseError when the payload is not an array", () => {
+    expect(() => parseScenarioQueue(JSON.stringify({ a: 1 }), isValidCategory)).toThrow(ParseError);
+  });
+
+  it("throws ParseError when an entry has an invalid category", () => {
+    const bad = JSON.stringify([
+      {
+        category: "spaceship",
+        persona: { name: "Maria Chen", department: "Marketing" },
+        environment: { os: "Windows 11", device: "Latitude 5540", detail: "x" },
+        rootCause: "x",
+        openingMessage: "x",
+      },
+    ]);
+    expect(() => parseScenarioQueue(bad, isValidCategory)).toThrow(ParseError);
   });
 });
 

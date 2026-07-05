@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { notFound, useParams } from "next/navigation";
+import { notFound, useParams, useSearchParams } from "next/navigation";
 import { isScenarioCategory, getCategoryMeta } from "@/lib/scenarios";
 import { TicketHeader } from "@/components/TicketHeader";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatBubble } from "@/components/ChatBubble";
 import { ResolutionBanner } from "@/components/ResolutionBanner";
-import type { ScenarioSeed, TranscriptMessage, GradeResult } from "@/lib/types";
+import type { ScenarioSeed, TicketPreview, TranscriptMessage, GradeResult } from "@/lib/types";
 
 type LoadState = "loading" | "ready" | "error";
 
@@ -19,13 +19,20 @@ function friendlyError(raw: string): string {
   return "Something went wrong loading this ticket. Try again.";
 }
 
+function ticketStorageKey(ticketId: string): string {
+  return `ticket:${ticketId}`;
+}
+
 export default function PlayPage() {
   const params = useParams<{ category: string }>();
   const category = params.category;
+  const searchParams = useSearchParams();
+  const ticketIdParam = searchParams.get("ticket");
 
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [seed, setSeed] = useState<ScenarioSeed | null>(null);
+  const [ticketId, setTicketId] = useState<string | null>(null);
   const [transcript, setTranscript] = useState<TranscriptMessage[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -34,6 +41,18 @@ export default function PlayPage() {
 
   useEffect(() => {
     if (!isScenarioCategory(category)) return;
+
+    if (ticketIdParam) {
+      const stored = sessionStorage.getItem(ticketStorageKey(ticketIdParam));
+      if (stored) {
+        const ticket = JSON.parse(stored) as TicketPreview;
+        setSeed(ticket);
+        setTicketId(ticket.ticketId);
+        setTranscript([{ role: "enduser", content: ticket.openingMessage }]);
+        setLoadState("ready");
+        return;
+      }
+    }
 
     let cancelled = false;
     async function start() {
@@ -52,6 +71,7 @@ export default function PlayPage() {
       }
       const body = await res.json();
       setSeed(body.seed);
+      setTicketId(ticketIdParam ?? getCategoryMeta(category as ScenarioSeed["category"]).ticketId);
       setTranscript([{ role: "enduser", content: body.seed.openingMessage }]);
       setLoadState("ready");
     }
@@ -59,7 +79,7 @@ export default function PlayPage() {
     return () => {
       cancelled = true;
     };
-  }, [category]);
+  }, [category, ticketIdParam]);
 
   if (!isScenarioCategory(category)) {
     notFound();
@@ -135,7 +155,7 @@ export default function PlayPage() {
     <main className="mx-auto max-w-3xl space-y-4 p-8">
       <TicketHeader
         category={seed.category}
-        ticketId={getCategoryMeta(seed.category).ticketId}
+        ticketId={ticketId ?? getCategoryMeta(seed.category).ticketId}
         status={gradeResult ? "resolved" : "in-progress"}
       />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[240px_1fr]">

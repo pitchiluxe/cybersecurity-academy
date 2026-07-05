@@ -19,6 +19,18 @@ export function extractJsonFromText(text: string): string {
   return candidate.slice(start, end + 1);
 }
 
+export function extractJsonArrayFromText(text: string): string {
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  const candidate = fenced ? fenced[1] : text;
+
+  const start = candidate.indexOf("[");
+  const end = candidate.lastIndexOf("]");
+  if (start === -1 || end === -1 || end < start) {
+    throw new ParseError(`No JSON array found in text: ${text.slice(0, 200)}`);
+  }
+  return candidate.slice(start, end + 1);
+}
+
 function requireString(value: unknown, field: string): string {
   if (typeof value !== "string" || value.trim() === "") {
     throw new ParseError(`Expected non-empty string for "${field}", got: ${JSON.stringify(value)}`);
@@ -26,20 +38,7 @@ function requireString(value: unknown, field: string): string {
   return value;
 }
 
-export function parseScenarioSeed(text: string, category: ScenarioCategory): ScenarioSeed {
-  let raw: unknown;
-  try {
-    raw = JSON.parse(extractJsonFromText(text));
-  } catch (err) {
-    if (err instanceof ParseError) throw err;
-    throw new ParseError(`Failed to JSON.parse scenario seed: ${(err as Error).message}`);
-  }
-
-  if (typeof raw !== "object" || raw === null) {
-    throw new ParseError("Scenario seed payload was not a JSON object");
-  }
-  const obj = raw as Record<string, unknown>;
-
+function seedFromObj(obj: Record<string, unknown>, category: ScenarioCategory): ScenarioSeed {
   const persona = obj.persona as Record<string, unknown> | undefined;
   const environment = obj.environment as Record<string, unknown> | undefined;
   if (typeof persona !== "object" || persona === null) {
@@ -63,6 +62,47 @@ export function parseScenarioSeed(text: string, category: ScenarioCategory): Sce
     rootCause: requireString(obj.rootCause, "rootCause"),
     openingMessage: requireString(obj.openingMessage, "openingMessage"),
   };
+}
+
+export function parseScenarioSeed(text: string, category: ScenarioCategory): ScenarioSeed {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(extractJsonFromText(text));
+  } catch (err) {
+    if (err instanceof ParseError) throw err;
+    throw new ParseError(`Failed to JSON.parse scenario seed: ${(err as Error).message}`);
+  }
+
+  if (typeof raw !== "object" || raw === null) {
+    throw new ParseError("Scenario seed payload was not a JSON object");
+  }
+  return seedFromObj(raw as Record<string, unknown>, category);
+}
+
+export function parseScenarioQueue(text: string, isValidCategory: (value: string) => boolean): ScenarioSeed[] {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(extractJsonArrayFromText(text));
+  } catch (err) {
+    if (err instanceof ParseError) throw err;
+    throw new ParseError(`Failed to JSON.parse scenario queue: ${(err as Error).message}`);
+  }
+
+  if (!Array.isArray(raw) || raw.length === 0) {
+    throw new ParseError(`Scenario queue payload was not a non-empty JSON array: ${JSON.stringify(raw).slice(0, 200)}`);
+  }
+
+  return raw.map((entry, i) => {
+    if (typeof entry !== "object" || entry === null) {
+      throw new ParseError(`queue[${i}] is not an object`);
+    }
+    const obj = entry as Record<string, unknown>;
+    const category = obj.category;
+    if (typeof category !== "string" || !isValidCategory(category)) {
+      throw new ParseError(`queue[${i}].category is missing or invalid: ${JSON.stringify(category)}`);
+    }
+    return seedFromObj(obj, category as ScenarioCategory);
+  });
 }
 
 export function parseGradeResult(text: string): GradeResult {

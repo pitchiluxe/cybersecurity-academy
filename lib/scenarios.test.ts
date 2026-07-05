@@ -1,4 +1,4 @@
-import { SCENARIO_CATEGORIES, isScenarioCategory, buildStartMessages, buildReplyMessages, buildGradeMessages } from "./scenarios";
+import { SCENARIO_CATEGORIES, isScenarioCategory, buildStartMessages, buildQueueMessages, buildReplyMessages, buildGradeMessages } from "./scenarios";
 import type { ScenarioSeed, TranscriptMessage } from "./types";
 
 describe("SCENARIO_CATEGORIES", () => {
@@ -26,6 +26,20 @@ describe("buildStartMessages", () => {
     expect(system!.content).toContain("Printer");
     expect(system!.content).toContain("rootCause");
     expect(system!.content).toContain("openingMessage");
+  });
+});
+
+describe("buildQueueMessages", () => {
+  it("includes the requested count, every category id, and a JSON array schema instruction", () => {
+    const messages = buildQueueMessages(9);
+    const system = messages.find((m) => m.role === "system")!;
+    expect(system.content).toContain("9");
+    for (const c of SCENARIO_CATEGORIES) {
+      expect(system.content).toContain(c.id);
+    }
+    expect(system.content).toContain("rootCause");
+    expect(system.content).toContain("openingMessage");
+    expect(system.content).toContain("category");
   });
 });
 

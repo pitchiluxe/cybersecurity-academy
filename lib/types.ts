@@ -14,6 +14,11 @@ export interface ScenarioSeed {
   openingMessage: string;
 }
 
+export interface TicketPreview extends ScenarioSeed {
+  ticketId: string;
+  priority: "P1" | "P2" | "P3";
+}
+
 export interface TranscriptMessage {
   role: "tech" | "enduser";
   content: string;
