@@ -40,6 +40,7 @@ describe("callOpenRouter", () => {
     expect(body).toEqual({
       model: "deepseek/deepseek-v4-flash:free",
       messages: [{ role: "user", content: "hi" }],
+      max_tokens: 1024,
     });
   });
 

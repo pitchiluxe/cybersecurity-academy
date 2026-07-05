@@ -39,7 +39,7 @@ export async function callOpenRouter(messages: ChatMessage[]): Promise<string> {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ model, messages }),
+    body: JSON.stringify({ model, messages, max_tokens: 1024 }),
   });
 
   if (!response.ok) {
