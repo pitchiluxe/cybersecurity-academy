@@ -1,13 +1,19 @@
 import type { ScenarioCategory, ScenarioSeed, TranscriptMessage } from "./types";
 import type { ChatMessage } from "./openrouter";
 
-export const SCENARIO_CATEGORIES: { id: ScenarioCategory; label: string; blurb: string }[] = [
-  { id: "network", label: "Network / Wi-Fi", blurb: "Connectivity drops, VPN failures, DNS issues." },
-  { id: "printer", label: "Printer", blurb: "Offline printers, blank pages, driver errors." },
-  { id: "password", label: "Password / MFA", blurb: "Lockouts, resets, multi-factor auth trouble." },
-  { id: "app-crash", label: "Application Crash", blurb: "Software that won't launch or keeps crashing." },
-  { id: "malware", label: "Malware / Quarantine", blurb: "Suspicious alerts, quarantined files, cleanup." },
-  { id: "hardware", label: "Hardware Failure", blurb: "Blue screens, dead peripherals, boot failures." },
+export const SCENARIO_CATEGORIES: {
+  id: ScenarioCategory;
+  label: string;
+  blurb: string;
+  ticketId: string;
+  priority: "P1" | "P2" | "P3";
+}[] = [
+  { id: "network", label: "Network / Wi-Fi", blurb: "Connectivity drops, VPN failures, DNS issues.", ticketId: "TCK-4471", priority: "P2" },
+  { id: "printer", label: "Printer", blurb: "Offline printers, blank pages, driver errors.", ticketId: "TCK-4472", priority: "P3" },
+  { id: "password", label: "Password / MFA", blurb: "Lockouts, resets, multi-factor auth trouble.", ticketId: "TCK-4473", priority: "P2" },
+  { id: "app-crash", label: "Application Crash", blurb: "Software that won't launch or keeps crashing.", ticketId: "TCK-4474", priority: "P2" },
+  { id: "malware", label: "Malware / Quarantine", blurb: "Suspicious alerts, quarantined files, cleanup.", ticketId: "TCK-4475", priority: "P1" },
+  { id: "hardware", label: "Hardware Failure", blurb: "Blue screens, dead peripherals, boot failures.", ticketId: "TCK-4476", priority: "P1" },
 ];
 
 const CATEGORY_LABELS: Record<ScenarioCategory, string> = Object.fromEntries(
@@ -16,6 +22,10 @@ const CATEGORY_LABELS: Record<ScenarioCategory, string> = Object.fromEntries(
 
 export function isScenarioCategory(value: string): value is ScenarioCategory {
   return SCENARIO_CATEGORIES.some((c) => c.id === value);
+}
+
+export function getCategoryMeta(category: ScenarioCategory) {
+  return SCENARIO_CATEGORIES.find((c) => c.id === category)!;
 }
 
 const RUBRIC_DESCRIPTION = `- Asked relevant clarifying questions before proposing a fix

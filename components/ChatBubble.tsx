@@ -3,7 +3,7 @@ import type { TranscriptMessage } from "@/lib/types";
 export function ChatBubble({ message, name }: { message: TranscriptMessage; name: string }) {
   const isTech = message.role === "tech";
   return (
-    <div className={`flex gap-3 ${isTech ? "flex-row-reverse self-end" : ""}`} style={{ maxWidth: "88%" }}>
+    <div className={`bubble-in flex gap-3 ${isTech ? "flex-row-reverse self-end" : ""}`} style={{ maxWidth: "88%" }}>
       <div
         className="flex h-8 w-8 flex-none items-center justify-center rounded-full font-mono text-xs font-bold"
         style={

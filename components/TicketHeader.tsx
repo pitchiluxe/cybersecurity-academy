@@ -11,9 +11,11 @@ const CATEGORY_LABELS: Record<ScenarioCategory, string> = {
 
 export function TicketHeader({
   category,
+  ticketId,
   status,
 }: {
   category: ScenarioCategory;
+  ticketId: string;
   status: "in-progress" | "resolved";
 }) {
   return (
@@ -21,7 +23,7 @@ export function TicketHeader({
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="font-mono text-xs" style={{ color: "var(--accent)" }}>
-            {CATEGORY_LABELS[category].toUpperCase()}
+            {ticketId} · {CATEGORY_LABELS[category].toUpperCase()}
           </div>
           <h1 className="font-display mt-1 text-2xl font-bold" style={{ color: "var(--ink)" }}>
             IT Playground Session

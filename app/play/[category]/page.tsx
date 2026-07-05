@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { notFound, useParams } from "next/navigation";
-import { isScenarioCategory } from "@/lib/scenarios";
+import { isScenarioCategory, getCategoryMeta } from "@/lib/scenarios";
 import { TicketHeader } from "@/components/TicketHeader";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatBubble } from "@/components/ChatBubble";
@@ -10,6 +10,14 @@ import { ResolutionBanner } from "@/components/ResolutionBanner";
 import type { ScenarioSeed, TranscriptMessage, GradeResult } from "@/lib/types";
 
 type LoadState = "loading" | "ready" | "error";
+
+function friendlyError(raw: string): string {
+  if (raw.includes("ANTHROPIC_AUTH_TOKEN")) return "IT Playground isn't configured with an API key yet.";
+  if (raw.includes("no message content") || raw.includes("OpenRouter request failed")) {
+    return "The ticket system didn't respond. Try again.";
+  }
+  return "Something went wrong loading this ticket. Try again.";
+}
 
 export default function PlayPage() {
   const params = useParams<{ category: string }>();
@@ -37,7 +45,8 @@ export default function PlayPage() {
       if (cancelled) return;
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        setErrorMessage(body.error ?? "Failed to start scenario.");
+        console.error("scenario/start failed:", body.error);
+        setErrorMessage(friendlyError(body.error ?? ""));
         setLoadState("error");
         return;
       }
@@ -70,9 +79,10 @@ export default function PlayPage() {
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
+      console.error("scenario/reply failed:", body.error);
       setTranscript([
         ...nextTranscript,
-        { role: "enduser", content: `[System: ${body.error ?? "Something glitched generating a response — try again."}]` },
+        { role: "enduser", content: `[System: ${friendlyError(body.error ?? "")}]` },
       ]);
       setSending(false);
       return;
@@ -92,7 +102,8 @@ export default function PlayPage() {
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      setErrorMessage(body.error ?? "Failed to grade session.");
+      console.error("scenario/grade failed:", body.error);
+      setErrorMessage(friendlyError(body.error ?? ""));
       setGrading(false);
       return;
     }
@@ -103,7 +114,11 @@ export default function PlayPage() {
   }
 
   if (loadState === "loading") {
-    return <main className="mx-auto max-w-3xl p-8">Loading scenario…</main>;
+    return (
+      <main className="mx-auto max-w-3xl p-8 font-mono text-sm" style={{ color: "var(--ink-muted)" }}>
+        Pulling up the ticket…
+      </main>
+    );
   }
 
   if (loadState === "error" || !seed) {
@@ -118,7 +133,11 @@ export default function PlayPage() {
 
   return (
     <main className="mx-auto max-w-3xl space-y-4 p-8">
-      <TicketHeader category={seed.category} status={gradeResult ? "resolved" : "in-progress"} />
+      <TicketHeader
+        category={seed.category}
+        ticketId={getCategoryMeta(seed.category).ticketId}
+        status={gradeResult ? "resolved" : "in-progress"}
+      />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[240px_1fr]">
         <Sidebar seed={seed} rootCause={gradeResult ? seed.rootCause : null} />
         <div className="flex flex-col gap-4 rounded-[10px] border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
