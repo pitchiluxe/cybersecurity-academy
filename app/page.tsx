@@ -22,6 +22,8 @@ export default function Home() {
       const res = await fetch("/api/scenario/queue", { method: "POST", body: JSON.stringify({ count: 9 }) });
       if (cancelled) return;
       if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        console.error("scenario/queue failed:", body.error);
         setLoadState("error");
         return;
       }
