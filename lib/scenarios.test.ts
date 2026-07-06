@@ -2,9 +2,9 @@ import { SCENARIO_CATEGORIES, isScenarioCategory, buildStartMessages, buildQueue
 import type { ScenarioSeed, TranscriptMessage } from "./types";
 
 describe("SCENARIO_CATEGORIES", () => {
-  it("has exactly the six fixed categories", () => {
+  it("has exactly the seven fixed categories", () => {
     expect(SCENARIO_CATEGORIES.map((c) => c.id).sort()).toEqual(
-      ["app-crash", "hardware", "malware", "network", "password", "printer"].sort()
+      ["app-crash", "hardware", "malware", "network", "password", "printer", "vm"].sort()
     );
   });
 });

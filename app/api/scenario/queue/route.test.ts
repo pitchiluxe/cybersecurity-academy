@@ -57,17 +57,34 @@ describe("POST /api/scenario/queue", () => {
     expect(mockedCall).toHaveBeenCalledTimes(2);
   });
 
-  it("returns 502 when both attempts return malformed JSON", async () => {
+  it("falls back to the built-in scenario bank when both attempts return malformed JSON", async () => {
     mockedCall.mockResolvedValue("still not json");
     const res = await POST(makeRequest({ count: 2 }));
-    expect(res.status).toBe(502);
+    expect(res.status).toBe(200);
     expect(mockedCall).toHaveBeenCalledTimes(2);
+    const body = await res.json();
+    expect(body.fallback).toBe(true);
+    expect(body.tickets).toHaveLength(2);
+    expect(body.tickets[0].ticketId).toEqual(expect.any(String));
+    expect(["P1", "P2", "P3"]).toContain(body.tickets[0].priority);
   });
 
-  it("returns 503 when the API key is missing", async () => {
+  it("falls back to the built-in scenario bank when the API key is missing", async () => {
     mockedCall.mockRejectedValue(new openrouter.MissingApiKeyError());
-    const res = await POST(makeRequest({ count: 2 }));
-    expect(res.status).toBe(503);
+    const res = await POST(makeRequest({ count: 9 }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.fallback).toBe(true);
+    expect(body.tickets.length).toBeGreaterThanOrEqual(6);
+  });
+
+  it("falls back to the built-in scenario bank on a provider error such as a rate limit", async () => {
+    mockedCall.mockRejectedValue(new openrouter.OpenRouterRequestError(429, "OpenRouter request failed (429): rate limited"));
+    const res = await POST(makeRequest({ count: 3 }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.fallback).toBe(true);
+    expect(body.tickets).toHaveLength(3);
   });
 
   it("defaults count to 9 when not provided", async () => {

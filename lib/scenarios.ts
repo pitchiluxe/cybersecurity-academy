@@ -14,6 +14,7 @@ export const SCENARIO_CATEGORIES: {
   { id: "app-crash", label: "Application Crash", blurb: "Software that won't launch or keeps crashing.", ticketId: "TCK-4474", priority: "P2" },
   { id: "malware", label: "Malware / Quarantine", blurb: "Suspicious alerts, quarantined files, cleanup.", ticketId: "TCK-4475", priority: "P1" },
   { id: "hardware", label: "Hardware Failure", blurb: "Blue screens, dead peripherals, boot failures.", ticketId: "TCK-4476", priority: "P1" },
+  { id: "vm", label: "Virtual Machine / VDI", blurb: "VMs that won't boot, snapshots, RDP/VDI sessions, hypervisor trouble.", ticketId: "TCK-4477", priority: "P2" },
 ];
 
 const CATEGORY_LABELS: Record<ScenarioCategory, string> = Object.fromEntries(
@@ -32,7 +33,23 @@ const RUBRIC_DESCRIPTION = `- Asked relevant clarifying questions before proposi
 - Diagnostic steps were logical and in a sensible order
 - Proposed fix actually addresses the hidden root cause
 - Verified the fix before closing
-- Professional, clear, empathetic tone throughout`;
+- Professional, clear, empathetic tone throughout
+- Documented clear, accurate resolution notes when closing the ticket`;
+
+export const SLA_TARGETS: Record<"P1" | "P2" | "P3", { respond: string; resolve: string }> = {
+  P1: { respond: "15 min", resolve: "4 h" },
+  P2: { respond: "1 h", resolve: "8 h" },
+  P3: { respond: "4 h", resolve: "3 days" },
+};
+
+export const REMOTE_TOOLS: { label: string; command: string }[] = [
+  { label: "Ping gateway", command: "/run ping -n 4 default-gateway" },
+  { label: "IP config", command: "/run ipconfig /all" },
+  { label: "Event log (recent errors)", command: "/run wevtutil qe System /c:5 /rd:true /f:text" },
+  { label: "Print spooler status", command: "/run sc query spooler" },
+  { label: "Disk health", command: "/run wmic diskdrive get status,model" },
+  { label: "System info", command: "/run systeminfo" },
+];
 
 export function buildStartMessages(category: ScenarioCategory): ChatMessage[] {
   const label = CATEGORY_LABELS[category];
@@ -51,11 +68,12 @@ Respond with ONLY a JSON object, no prose, no markdown fences, matching exactly 
   ];
 }
 
-export function buildQueueMessages(count: number): ChatMessage[] {
+export function buildQueueMessages(count: number, varietySeed: number = Math.floor(Math.random() * 1_000_000)): ChatMessage[] {
   const categoryList = SCENARIO_CATEGORIES.map((c) => `"${c.id}" (${c.label})`).join(", ");
   const system = `You are generating a queue of ${count} training tickets for an IT helpdesk trainee.
 The available categories are: ${categoryList}.
-Invent ${count} plausible, specific, non-generic end-user personas and problems, spread roughly evenly across all six categories — do not use the same category more than twice. Make up a name, department, device/OS, and a concrete root cause a real technician could diagnose from symptoms alone for each one.
+Invent ${count} plausible, specific, non-generic end-user personas and problems, spread roughly evenly across all ${SCENARIO_CATEGORIES.length} categories — do not use the same category more than twice. Make up a name, department, device/OS, and a concrete root cause a real technician could diagnose from symptoms alone for each one.
+Variety seed: ${varietySeed}. Every batch must feel different: vary names across cultures, vary departments and industries, vary device brands and OS versions, and pick root causes beyond the obvious clichés (not always "driver update broke it"). Include real-world messiness — vague users, secondhand reports, problems that started after office moves, updates, or new equipment.
 Respond with ONLY a JSON array of ${count} objects, no prose, no markdown fences, where each object matches exactly this shape:
 {
   "category": "one of the category ids listed above, exactly as written",
@@ -81,7 +99,9 @@ export function buildReplyMessages(seed: ScenarioSeed, transcript: TranscriptMes
   const system = `You are roleplaying "${seed.persona.name}" (${seed.persona.department}) in an IT support chat, category "${CATEGORY_LABELS[seed.category]}".
 Your device/environment: OS ${seed.environment.os}, device ${seed.environment.device}, detail: ${seed.environment.detail}.
 The real underlying root cause of your problem is: ${seed.rootCause}.
-Stay in character as the end-user. Answer the technician's questions plausibly based on the root cause, describing symptoms you would actually observe — never state the root cause outright, and never use technical jargon a typical end-user wouldn't know. If the technician's fix genuinely resolves the root cause, confirm it works. Keep replies to 1-3 sentences.`;
+Stay in character as the end-user. Answer the technician's questions plausibly based on the root cause, describing symptoms you would actually observe — never state the root cause outright, and never use technical jargon a typical end-user wouldn't know. If the technician's fix genuinely resolves the root cause, confirm it works. Keep replies to 1-3 sentences.
+
+Exception — remote diagnostics: if the technician's latest message starts with "/run ", it is a remote command executed on your machine by the IT remote-management tool, not something said to you. Respond with ONLY the plausible raw terminal/tool output of that command on your machine (Windows-style where applicable), consistent with the hidden root cause. No prose, no roleplay, no markdown fences, no explanation — output text only, max ~12 lines. The output may contain clues pointing toward the root cause but must never name it outright.`;
   return [{ role: "system", content: system }, ...transcriptToTurns(transcript)];
 }
 

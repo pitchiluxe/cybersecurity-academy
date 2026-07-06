@@ -1,17 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { notFound, useParams, useSearchParams } from "next/navigation";
 import { isScenarioCategory, getCategoryMeta } from "@/lib/scenarios";
 import { TicketHeader } from "@/components/TicketHeader";
 import { Sidebar } from "@/components/Sidebar";
-import { ChatBubble } from "@/components/ChatBubble";
+import { ChatBubble, isRunCommand } from "@/components/ChatBubble";
 import { ResolutionBanner } from "@/components/ResolutionBanner";
 import type { ScenarioSeed, TicketPreview, TranscriptMessage, GradeResult } from "@/lib/types";
 
 type LoadState = "loading" | "ready" | "error";
 
 function friendlyError(raw: string): string {
+  if (raw.includes("Could not reach Ollama")) {
+    return "Ollama isn't running on this machine. Start the Ollama app, or switch provider in Settings.";
+  }
+  if (raw.includes("Rate limit exceeded") || raw.includes("(429)")) {
+    return "The AI provider's daily rate limit was reached. Try again after it resets, or switch to Ollama in Settings.";
+  }
   if (raw.includes("ANTHROPIC_AUTH_TOKEN")) return "IT Playground isn't configured with an API key yet.";
   if (raw.includes("no message content") || raw.includes("OpenRouter request failed")) {
     return "The ticket system didn't respond. Try again.";
@@ -32,12 +38,16 @@ export default function PlayPage() {
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [seed, setSeed] = useState<ScenarioSeed | null>(null);
+  const [priority, setPriority] = useState<"P1" | "P2" | "P3">("P2");
   const [ticketId, setTicketId] = useState<string | null>(null);
   const [transcript, setTranscript] = useState<TranscriptMessage[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [grading, setGrading] = useState(false);
   const [gradeResult, setGradeResult] = useState<GradeResult | null>(null);
+  const [closing, setClosing] = useState(false);
+  const [resolutionNotes, setResolutionNotes] = useState("");
+  const logEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isScenarioCategory(category)) return;
@@ -47,6 +57,7 @@ export default function PlayPage() {
       if (stored) {
         const ticket = JSON.parse(stored) as TicketPreview;
         setSeed(ticket);
+        setPriority(ticket.priority);
         setTicketId(ticket.ticketId);
         setTranscript([{ role: "enduser", content: ticket.openingMessage }]);
         setLoadState("ready");
@@ -70,8 +81,10 @@ export default function PlayPage() {
         return;
       }
       const body = await res.json();
+      const meta = getCategoryMeta(category as ScenarioSeed["category"]);
       setSeed(body.seed);
-      setTicketId(ticketIdParam ?? getCategoryMeta(category as ScenarioSeed["category"]).ticketId);
+      setPriority(meta.priority);
+      setTicketId(ticketIdParam ?? meta.ticketId);
       setTranscript([{ role: "enduser", content: body.seed.openingMessage }]);
       setLoadState("ready");
     }
@@ -81,15 +94,18 @@ export default function PlayPage() {
     };
   }, [category, ticketIdParam]);
 
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ block: "nearest" });
+  }, [transcript, sending]);
+
   if (!isScenarioCategory(category)) {
     notFound();
   }
 
-  async function sendMessage() {
-    if (!seed || input.trim() === "" || sending) return;
-    const nextTranscript: TranscriptMessage[] = [...transcript, { role: "tech", content: input.trim() }];
+  async function dispatch(content: string) {
+    if (!seed || sending) return;
+    const nextTranscript: TranscriptMessage[] = [...transcript, { role: "tech", content }];
     setTranscript(nextTranscript);
-    setInput("");
     setSending(true);
 
     const res = await fetch("/api/scenario/reply", {
@@ -113,12 +129,23 @@ export default function PlayPage() {
     setSending(false);
   }
 
+  async function sendMessage() {
+    if (input.trim() === "") return;
+    const content = input.trim();
+    setInput("");
+    await dispatch(content);
+  }
+
   async function submitForGrading() {
-    if (!seed || grading) return;
+    if (!seed || grading || resolutionNotes.trim() === "") return;
     setGrading(true);
+    const closedTranscript: TranscriptMessage[] = [
+      ...transcript,
+      { role: "tech", content: `Resolution notes: ${resolutionNotes.trim()}` },
+    ];
     const res = await fetch("/api/scenario/grade", {
       method: "POST",
-      body: JSON.stringify({ seed, transcript }),
+      body: JSON.stringify({ seed, transcript: closedTranscript }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
@@ -128,23 +155,28 @@ export default function PlayPage() {
       return;
     }
     const body = await res.json();
+    setTranscript(closedTranscript);
     setGradeResult(body.result);
     setSeed({ ...seed, rootCause: body.rootCause });
     setGrading(false);
+    setClosing(false);
   }
 
   if (loadState === "loading") {
     return (
-      <main className="mx-auto max-w-3xl p-8 font-mono text-sm" style={{ color: "var(--ink-muted)" }}>
-        Pulling up the ticket…
+      <main className="mx-auto max-w-5xl p-6 sm:p-8">
+        <div className="h-24 animate-pulse rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }} />
+        <p className="mt-4 font-mono text-sm" style={{ color: "var(--ink-muted)" }}>
+          Pulling up the ticket…
+        </p>
       </main>
     );
   }
 
   if (loadState === "error" || !seed) {
     return (
-      <main className="mx-auto max-w-3xl p-8">
-        <div className="rounded-[10px] border p-5" style={{ background: "var(--warn-soft)", borderColor: "var(--warn-line)" }}>
+      <main className="mx-auto max-w-5xl p-6 sm:p-8">
+        <div className="rounded-xl border p-5" style={{ background: "var(--warn-soft)", borderColor: "var(--warn-line)" }}>
           <p style={{ color: "var(--warn)" }}>{errorMessage}</p>
         </div>
       </main>
@@ -152,50 +184,92 @@ export default function PlayPage() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl space-y-4 p-8">
+    <main className="mx-auto max-w-5xl space-y-4 p-6 sm:p-8">
       <TicketHeader
         category={seed.category}
         ticketId={ticketId ?? getCategoryMeta(seed.category).ticketId}
+        priority={priority}
         status={gradeResult ? "resolved" : "in-progress"}
       />
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-[240px_1fr]">
-        <Sidebar seed={seed} rootCause={gradeResult ? seed.rootCause : null} />
-        <div className="flex flex-col gap-4 rounded-[10px] border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-          {transcript.map((message, i) => (
-            <ChatBubble key={i} message={message} name={message.role === "tech" ? "You" : seed.persona.name} />
-          ))}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[260px_1fr]">
+        <Sidebar
+          seed={seed}
+          rootCause={gradeResult ? seed.rootCause : null}
+          onRunDiagnostic={gradeResult ? undefined : (command) => dispatch(command)}
+          diagnosticsDisabled={sending || grading}
+        />
+        <div className="panel flex flex-col gap-4 p-5">
+          <div className="panel-header">Session log</div>
+          {transcript.map((message, i) => {
+            const prev = i > 0 ? transcript[i - 1] : null;
+            const variant = isRunCommand(message)
+              ? "command"
+              : prev && isRunCommand(prev) && message.role === "enduser"
+                ? "terminal"
+                : "chat";
+            return (
+              <ChatBubble
+                key={i}
+                message={message}
+                name={message.role === "tech" ? "You" : seed.persona.name}
+                variant={variant}
+              />
+            );
+          })}
+          {sending && (
+            <div className="font-mono text-xs" style={{ color: "var(--ink-faint)" }}>
+              {isRunCommand(transcript[transcript.length - 1]) ? "Running remote diagnostic…" : `${seed.persona.name} is typing…`}
+            </div>
+          )}
+          <div ref={logEndRef} />
         </div>
       </div>
 
-      {!gradeResult && (
-        <div className="flex gap-2">
+      {!gradeResult && !closing && (
+        <div className="flex flex-wrap gap-2">
           <input
-            className="flex-1 rounded-lg border px-3 py-2 text-sm"
-            style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--ink)" }}
+            className="field-input w-full min-w-0 sm:w-auto sm:flex-1"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") sendMessage();
             }}
-            placeholder="Type your response…"
+            placeholder="Reply to the user, or type /run <command> for remote diagnostics…"
             disabled={sending}
+            aria-label="Message to end user"
           />
-          <button
-            className="cursor-pointer rounded-lg px-4 py-2 text-sm font-bold"
-            style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
-            onClick={sendMessage}
-            disabled={sending || input.trim() === ""}
-          >
+          <button className="btn-primary" onClick={sendMessage} disabled={sending || input.trim() === ""}>
             Send
           </button>
-          <button
-            className="cursor-pointer rounded-lg border px-4 py-2 text-sm font-bold"
-            style={{ borderColor: "var(--good-line)", color: "var(--good)" }}
-            onClick={submitForGrading}
-            disabled={grading || transcript.length < 2}
-          >
-            {grading ? "Grading…" : "Resolve & Submit"}
+          <button className="btn-ghost" onClick={() => setClosing(true)} disabled={grading || transcript.length < 2}>
+            Close ticket…
           </button>
+        </div>
+      )}
+
+      {!gradeResult && closing && (
+        <div className="panel p-5">
+          <div className="panel-header mb-2">Close ticket — resolution notes</div>
+          <p className="mb-3 text-sm" style={{ color: "var(--ink-muted)" }}>
+            Document what was wrong and how you fixed it. Notes are part of your grade — real desks
+            live and die by them.
+          </p>
+          <textarea
+            className="field-input w-full"
+            rows={3}
+            value={resolutionNotes}
+            onChange={(e) => setResolutionNotes(e.target.value)}
+            placeholder="e.g. Root cause: corrupted VPN adapter driver after Windows update. Reinstalled GlobalProtect, verified tunnel connects, user confirmed access restored."
+            aria-label="Resolution notes"
+          />
+          <div className="mt-3 flex gap-2">
+            <button className="btn-primary" onClick={submitForGrading} disabled={grading || resolutionNotes.trim() === ""}>
+              {grading ? "Grading…" : "Resolve & submit for grading"}
+            </button>
+            <button className="btn-ghost" onClick={() => setClosing(false)} disabled={grading}>
+              Back to session
+            </button>
+          </div>
         </div>
       )}
 

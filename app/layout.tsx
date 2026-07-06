@@ -1,18 +1,11 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Work_Sans, JetBrains_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { NavBar } from "@/components/NavBar";
 
-const bricolage = Bricolage_Grotesque({
+const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  weight: "700",
-  variable: "--font-display",
-  display: "swap",
-});
-
-const workSans = Work_Sans({
-  subsets: ["latin"],
-  weight: ["400", "700"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-body",
   display: "swap",
 });
@@ -25,13 +18,13 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "IT Playground",
-  description: "Practice being IT support against an AI end-user.",
+  title: "HelpDesk Console — IT Support Training Simulator",
+  description: "Work a simulated IT service desk: triage tickets, run remote diagnostics, resolve issues, get graded.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${bricolage.variable} ${workSans.variable} ${jetBrainsMono.variable}`}>
+    <html lang="en" className={`${jakarta.variable} ${jetBrainsMono.variable}`}>
       <body>
         <NavBar />
         {children}

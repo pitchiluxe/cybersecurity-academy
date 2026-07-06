@@ -1,6 +1,37 @@
 import type { TranscriptMessage } from "@/lib/types";
 
-export function ChatBubble({ message, name }: { message: TranscriptMessage; name: string }) {
+export const RUN_COMMAND_PREFIX = "/run ";
+
+export function isRunCommand(message: TranscriptMessage): boolean {
+  return message.role === "tech" && message.content.startsWith(RUN_COMMAND_PREFIX);
+}
+
+export function ChatBubble({
+  message,
+  name,
+  variant = "chat",
+}: {
+  message: TranscriptMessage;
+  name: string;
+  variant?: "chat" | "command" | "terminal";
+}) {
+  if (variant === "command") {
+    return (
+      <div className="bubble-in self-end" style={{ maxWidth: "88%" }}>
+        <span className="cmd-chip">{message.content.slice(RUN_COMMAND_PREFIX.length)}</span>
+      </div>
+    );
+  }
+
+  if (variant === "terminal") {
+    return (
+      <div className="bubble-in w-full" style={{ maxWidth: "88%" }}>
+        <div className="terminal-title">Remote diagnostic · {name}&apos;s machine</div>
+        <pre className="terminal-block">{message.content}</pre>
+      </div>
+    );
+  }
+
   const isTech = message.role === "tech";
   return (
     <div className={`bubble-in flex gap-3 ${isTech ? "flex-row-reverse self-end" : ""}`} style={{ maxWidth: "88%" }}>

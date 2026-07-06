@@ -2,31 +2,29 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## What this repo actually is
+## What this repo is
 
-This is a **prompt-engineering / agent-spec project**, not an implemented application. There is no source code, no `package.json`, no build tooling, and no tests. The repo consists of three markdown documents that define an AI agent persona plus a set of bundled `.claude/skills/` (mostly third-party skill plugins, not project-specific code).
+A **Next.js 14 (App Router) IT help-desk training simulator** ("HelpDesk Console"). The trainee plays a Tier-1 technician: a queue of AI-generated tickets is shown on `/`, each ticket opens a chat session against an LLM role-playing the end-user, the trainee can run simulated remote diagnostics (`/run <command>`), and closes the ticket with resolution notes to receive a rubric-based 0–100 grade.
 
-The previous version of this file described a full React/Node/Postgres/Prisma stack with npm scripts, Docker, CI, etc. **None of that exists in this repo.** Do not assume that stack, do not run `npm install`, and do not go looking for a `client/` or `server/` directory — there isn't one. If a future task actually adds that implementation, update this file to match reality at that point.
+The original prompt-spec documents ([agent.md](agent.md), [prompt.md](prompt.md), `.claude/skills/itsupportsimulation/`) still exist but are historical design docs — the implemented app is the source of truth now.
 
-## Repo contents
+## Commands
 
-- **[agent.md](agent.md)** — the core spec for "IT-Support-Simulator": a system prompt/persona for an LLM agent that role-plays a help-desk technician. Defines its purpose, the full system prompt text, three mock tools (`KnowledgeBase`, `RemoteCommand`, `TicketDB`), example interactions, and configuration parameters (model, temperature, token limits, etc.) intended for use in an "AIHub Agent Builder"-style platform.
-- **[prompt.md](prompt.md)** — a single one-shot prompt for generating a static, fully-written IT support conversation transcript (no tool calls, just prose output).
-- **[.claude/skills/itsupportsimulation/skill.md](.claude/skills/itsupportsimulation/skill.md)** — a *different*, more interactive skill spec: a scenario-driven, menu-based simulation (pick a scenario like "Wi-Fi connectivity loss", gather info, diagnose, propose a fix, document the ticket, get scored 0–100). Includes a Node.js sketch (`createSkill(...)`) and a scenario JSON template, but these are illustrative snippets, not real runnable code in this repo.
-- **`.claude/skills/*`** (other than `itsupportsimulation`) — general-purpose skill plugins (canvas-design, code-reviewer, react-best-practices, senior-backend/frontend/security, ui-design-system, ui-ux-pro-max). These are reusable tooling bundles, unrelated to the IT-support domain itself; don't treat their presence as evidence this is a coded app.
+- `npm run dev` — dev server (Next.js, defaults to port 3000; respects `PORT`)
+- `npm run build` — production build (fails if dev server is running against the same `.next/`; delete `.next/` if builds error with PageNotFoundError)
+- `npm test` — Jest (ts-jest); tests live next to sources as `*.test.ts`
 
-## Key distinction to keep in mind
+## Environment
 
-`agent.md` and `.claude/skills/itsupportsimulation/skill.md` describe **two different, non-identical designs** for what is nominally the same simulation idea:
+`.env.local` must define:
+- `AUTH_SECRET` — HS256 secret for session JWTs
+- `ANTHROPIC_BASE_URL` / `ANTHROPIC_AUTH_TOKEN` (or `ANTHROPIC_API_KEY`) / `ANTHROPIC_MODEL` — OpenRouter-compatible endpoint used by `lib/openrouter.ts`. The free OpenRouter tier has a daily request cap; 429s surface in the UI as a friendly rate-limit message.
 
-| | agent.md | itsupportsimulation/skill.md |
-|---|---|---|
-| Interaction style | Free-form conversation, agent classifies issue itself | Fixed menu of predefined scenarios |
-| Tools | `KnowledgeBase`, `RemoteCommand`, `TicketDB` | Generic diagnostic commands (`ping`, `ipconfig`, `eventvwr`) |
-| Output | Resolved issue or created ticket | Scored transcript (0–100) at the end |
+## Architecture
 
-If asked to "implement" or "extend" the simulation, clarify which spec (or a merge of both) is the intended source of truth before writing code — they are not drop-in compatible.
-
-## Working in this repo
-
-Since there's no code, typical tasks here are editing/extending these markdown specs (system prompts, tool definitions, scenario data) rather than running builds or tests. If a task introduces actual application code (e.g., implementing `it-support-simulation` as a real Node.js skill with `scenarios/` JSON files, per the "Ready to deploy" section of skill.md), scaffold it fresh and add the corresponding install/build/test/lint commands to this file at that time.
+- **Auth**: email+password (bcryptjs) in SQLite via better-sqlite3 (`lib/db.ts`); JWT session cookie (`lib/session.ts`, cookie name `session`); `middleware.ts` gates `/` and `/play/*` (redirects to `/login`). API routes under `app/api/auth/*`.
+  - **Important**: after any auth state change (login/register/logout), client code must use `window.location.assign(...)`, NOT `router.push` — the Next 14 client Router Cache caches middleware redirects, so soft navigation bounces users back to `/login` even with a valid cookie.
+- **Scenario engine**: `lib/scenarios.ts` builds all LLM prompts (queue generation, end-user roleplay replies, grading). The end-user reply prompt treats tech messages starting with `/run ` as remote diagnostic commands and answers with raw terminal-style output. Rubric includes resolution-notes documentation.
+- **API routes** `app/api/scenario/{queue,start,reply,grade}` are thin wrappers: build messages → `callOpenRouter` → parse (`lib/parsing.ts`).
+- **UI**: client components; design tokens (CSS variables, light+dark) in `app/globals.css` — slate/blue "service desk console" theme, Plus Jakarta Sans + JetBrains Mono. Reusable classes: `.panel`, `.pill-*`, `.stat-card`, `.terminal-block`, `.cmd-chip`, `.tool-btn`, `.field-input`, `.btn-primary/.btn-ghost`. Priority mapping: P1=danger, P2=warn, P3=accent; SLA targets in `SLA_TARGETS`.
+- **Ticket handoff**: queue page stashes the full `TicketPreview` in `sessionStorage` (`ticket:<id>`) and `/play/[category]?ticket=<id>` reads it; without the param it generates a fresh scenario via `/api/scenario/start`.

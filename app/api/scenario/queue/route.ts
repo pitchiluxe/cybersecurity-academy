@@ -2,10 +2,25 @@ import { NextResponse } from "next/server";
 import { buildQueueMessages, isScenarioCategory, getCategoryMeta } from "@/lib/scenarios";
 import { callOpenRouter, MissingApiKeyError, OpenRouterRequestError } from "@/lib/openrouter";
 import { parseScenarioQueue, ParseError } from "@/lib/parsing";
-import type { TicketPreview } from "@/lib/types";
+import { FALLBACK_SEEDS } from "@/lib/fallbackTickets";
+import type { ScenarioSeed, TicketPreview } from "@/lib/types";
 
 function randomTicketId(): string {
   return `TCK-${Math.floor(1000 + Math.random() * 9000)}`;
+}
+
+function toTickets(seeds: ScenarioSeed[]): TicketPreview[] {
+  return seeds.map((seed) => ({
+    ...seed,
+    ticketId: randomTicketId(),
+    priority: getCategoryMeta(seed.category).priority,
+  }));
+}
+
+function fallbackResponse(count: number): NextResponse {
+  const shuffled = [...FALLBACK_SEEDS].sort(() => Math.random() - 0.5);
+  const tickets = toTickets(shuffled.slice(0, Math.min(count, shuffled.length)));
+  return NextResponse.json({ tickets, fallback: true }, { status: 200 });
 }
 
 export async function POST(request: Request) {
@@ -18,21 +33,15 @@ export async function POST(request: Request) {
     try {
       const text = await callOpenRouter(messages);
       const seeds = parseScenarioQueue(text, isScenarioCategory);
-      const tickets: TicketPreview[] = seeds.map((seed) => ({
-        ...seed,
-        ticketId: randomTicketId(),
-        priority: getCategoryMeta(seed.category).priority,
-      }));
-      return NextResponse.json({ tickets }, { status: 200 });
+      return NextResponse.json({ tickets: toTickets(seeds) }, { status: 200 });
     } catch (err) {
-      if (err instanceof MissingApiKeyError) {
-        return NextResponse.json({ error: err.message }, { status: 503 });
-      }
-      if (err instanceof OpenRouterRequestError) {
-        return NextResponse.json({ error: err.message }, { status: 502 });
+      // Any provider failure (missing key, rate limit, bad output twice) falls
+      // back to the built-in scenario bank so the desk stays open offline.
+      if (err instanceof MissingApiKeyError || err instanceof OpenRouterRequestError) {
+        return fallbackResponse(count);
       }
       if (err instanceof ParseError && attempt === 1) {
-        return NextResponse.json({ error: `Could not parse ticket queue from model: ${err.message}` }, { status: 502 });
+        return fallbackResponse(count);
       }
     }
   }

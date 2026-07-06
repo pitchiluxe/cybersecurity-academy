@@ -1,3 +1,5 @@
+import { getSettings } from "./settings";
+
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
@@ -19,10 +21,32 @@ export class OpenRouterRequestError extends Error {
   }
 }
 
-export async function callOpenRouter(messages: ChatMessage[]): Promise<string> {
+const MAX_ATTEMPTS = 3;
+// Free-model pools are often congested (429) or briefly down (5xx); both are
+// worth one short retry before giving up.
+const RETRYABLE_STATUSES = new Set([429, 502, 503]);
+
+function getRetryDelayMs(attempt: number): number {
+  if (process.env.NODE_ENV === "test") return 0;
+  return 1500 * (attempt + 1);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+interface ProviderRequest {
+  url: string;
+  headers: Record<string, string>;
+  payload: Record<string, unknown>;
+}
+
+// OpenRouter caps the `models` fallback-routing array at 3 entries.
+function buildOpenRouterRequest(messages: ChatMessage[]): ProviderRequest {
   const baseUrl = process.env.ANTHROPIC_BASE_URL;
   const token = process.env.ANTHROPIC_AUTH_TOKEN;
-  const model = process.env.ANTHROPIC_MODEL;
+  const settings = getSettings();
+  const model = settings.openrouterModel;
 
   if (!token) {
     throw new MissingApiKeyError();
@@ -31,29 +55,78 @@ export async function callOpenRouter(messages: ChatMessage[]): Promise<string> {
     throw new OpenRouterRequestError(500, "ANTHROPIC_BASE_URL or ANTHROPIC_MODEL is not configured");
   }
 
-  const url = `${baseUrl.replace(/\/$/, "")}/v1/chat/completions`;
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ model, messages, max_tokens: 4096 }),
-  });
-
-  if (!response.ok) {
-    const errBody = await response.json().catch(() => ({}));
-    throw new OpenRouterRequestError(
-      response.status,
-      `OpenRouter request failed (${response.status}): ${JSON.stringify(errBody)}`
-    );
+  const modelList = [model, ...settings.openrouterFallbacks.filter((m) => m !== model)].slice(0, 3);
+  const payload: Record<string, unknown> = { model, messages, max_tokens: 4096 };
+  if (modelList.length > 1) {
+    payload.models = modelList;
   }
 
-  const data = await response.json().catch(() => ({}));
-  const content = data?.choices?.[0]?.message?.content;
-  if (typeof content !== "string") {
-    throw new OpenRouterRequestError(502, "OpenRouter response had no message content");
+  return {
+    url: `${baseUrl.replace(/\/$/, "")}/v1/chat/completions`,
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    payload,
+  };
+}
+
+// Ollama exposes an OpenAI-compatible endpoint; no API key needed.
+function buildOllamaRequest(messages: ChatMessage[]): ProviderRequest {
+  const settings = getSettings();
+  if (!settings.ollamaModel) {
+    throw new OpenRouterRequestError(500, "No Ollama model selected. Pick one in Settings.");
   }
-  return content;
+  return {
+    url: `${settings.ollamaBaseUrl.replace(/\/$/, "")}/v1/chat/completions`,
+    headers: { "Content-Type": "application/json" },
+    payload: { model: settings.ollamaModel, messages, max_tokens: 4096 },
+  };
+}
+
+// Named for its original backend; now routes to OpenRouter or local Ollama
+// depending on saved settings.
+export async function callOpenRouter(messages: ChatMessage[]): Promise<string> {
+  const provider = getSettings().provider;
+  const request = provider === "ollama" ? buildOllamaRequest(messages) : buildOpenRouterRequest(messages);
+
+  let lastError: OpenRouterRequestError | null = null;
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    let response: Response;
+    try {
+      response = await fetch(request.url, {
+        method: "POST",
+        headers: request.headers,
+        body: JSON.stringify(request.payload),
+      });
+    } catch (err) {
+      // Connection refused (e.g. Ollama not running) — not retryable.
+      throw new OpenRouterRequestError(
+        503,
+        provider === "ollama"
+          ? `Could not reach Ollama at ${request.url}. Is the Ollama app running?`
+          : `Could not reach the AI provider: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => ({}));
+      lastError = new OpenRouterRequestError(
+        response.status,
+        `OpenRouter request failed (${response.status}): ${JSON.stringify(errBody)}`
+      );
+      if (RETRYABLE_STATUSES.has(response.status) && attempt < MAX_ATTEMPTS - 1) {
+        await sleep(getRetryDelayMs(attempt));
+        continue;
+      }
+      throw lastError;
+    }
+
+    const data = await response.json().catch(() => ({}));
+    const content = data?.choices?.[0]?.message?.content;
+    if (typeof content !== "string" || content.length === 0) {
+      throw new OpenRouterRequestError(502, "OpenRouter response had no message content");
+    }
+    return content;
+  }
+
+  throw lastError ?? new OpenRouterRequestError(500, "OpenRouter request failed");
 }

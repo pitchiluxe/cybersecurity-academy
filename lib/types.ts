@@ -4,7 +4,8 @@ export type ScenarioCategory =
   | "password"
   | "app-crash"
   | "malware"
-  | "hardware";
+  | "hardware"
+  | "vm";
 
 export interface ScenarioSeed {
   category: ScenarioCategory;
