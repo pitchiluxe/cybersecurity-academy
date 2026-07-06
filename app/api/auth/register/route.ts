@@ -20,14 +20,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Passwords must be at least 8 characters." }, { status: 400 });
   }
   if (Buffer.byteLength(password, "utf8") > MAX_PASSWORD_LENGTH) {
-    return NextResponse.json({ error: "Passwords must be 72 characters or fewer." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Passwords must be 72 bytes or fewer (most passwords are well under this)." },
+      { status: 400 },
+    );
   }
   if (findUserByEmail(email)) {
     return NextResponse.json({ error: "That email's already registered." }, { status: 409 });
   }
 
   const passwordHash = await hashPassword(password);
-  const user = createUser(email, passwordHash);
+
+  let user;
+  try {
+    user = createUser(email, passwordHash);
+  } catch {
+    return NextResponse.json({ error: "That email's already registered." }, { status: 409 });
+  }
+
   const token = await createSessionToken({ userId: user.id, email: user.email });
 
   const res = NextResponse.json({ user: { id: user.id, email: user.email } }, { status: 201 });

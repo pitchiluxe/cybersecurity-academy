@@ -5,6 +5,7 @@ import {
   verifySessionToken,
   getCookieValue,
   setSessionCookie,
+  clearSessionCookie,
   SESSION_COOKIE_NAME,
 } from "./session";
 
@@ -71,6 +72,36 @@ describe("setSessionCookie", () => {
     Object.defineProperty(process.env, "NODE_ENV", { value: "test", configurable: true });
     const res = NextResponse.json({ ok: true });
     setSessionCookie(res, "token-value");
+    expect(res.headers.get("set-cookie")).not.toContain("Secure");
+  });
+});
+
+describe("clearSessionCookie", () => {
+  const ORIGINAL_NODE_ENV = process.env.NODE_ENV;
+
+  afterEach(() => {
+    Object.defineProperty(process.env, "NODE_ENV", { value: ORIGINAL_NODE_ENV, configurable: true });
+  });
+
+  it("clears the cookie with an empty value and Max-Age=0", () => {
+    const res = NextResponse.json({ ok: true });
+    clearSessionCookie(res);
+    const setCookie = res.headers.get("set-cookie");
+    expect(setCookie).toContain(`${SESSION_COOKIE_NAME}=;`);
+    expect(setCookie).toContain("Max-Age=0");
+  });
+
+  it("sets the secure flag when NODE_ENV is production", () => {
+    Object.defineProperty(process.env, "NODE_ENV", { value: "production", configurable: true });
+    const res = NextResponse.json({ ok: true });
+    clearSessionCookie(res);
+    expect(res.headers.get("set-cookie")).toContain("Secure");
+  });
+
+  it("does not set the secure flag when NODE_ENV is not production", () => {
+    Object.defineProperty(process.env, "NODE_ENV", { value: "test", configurable: true });
+    const res = NextResponse.json({ ok: true });
+    clearSessionCookie(res);
     expect(res.headers.get("set-cookie")).not.toContain("Secure");
   });
 });

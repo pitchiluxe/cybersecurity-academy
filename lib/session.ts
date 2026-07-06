@@ -27,7 +27,7 @@ export async function createSessionToken(payload: SessionPayload): Promise<strin
 
 export async function verifySessionToken(token: string): Promise<SessionPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, getSecretKey());
+    const { payload } = await jwtVerify(token, getSecretKey(), { algorithms: ["HS256"] });
     if (typeof payload.userId !== "number" || typeof payload.email !== "string") {
       return null;
     }
@@ -43,6 +43,16 @@ export function setSessionCookie(res: NextResponse, token: string): void {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     maxAge: SESSION_DURATION_SECONDS,
+    path: "/",
+  });
+}
+
+export function clearSessionCookie(res: NextResponse): void {
+  res.cookies.set(SESSION_COOKIE_NAME, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 0,
     path: "/",
   });
 }

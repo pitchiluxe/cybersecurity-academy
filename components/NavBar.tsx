@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 export function NavBar() {
   const router = useRouter();
+  const pathname = usePathname();
   const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
@@ -13,12 +14,16 @@ export function NavBar() {
     fetch("/api/auth/me")
       .then((res) => (res.ok ? res.json() : null))
       .then((body) => {
-        if (!cancelled && body) setEmail(body.user.email);
+        if (cancelled) return;
+        setEmail(body?.user?.email ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setEmail(null);
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [pathname]);
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
