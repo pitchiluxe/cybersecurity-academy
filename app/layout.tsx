@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Work_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { NavBar } from "@/components/NavBar";
 
 const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -31,7 +32,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${bricolage.variable} ${workSans.variable} ${jetBrainsMono.variable}`}>
-      <body>{children}</body>
+      <body>
+        <NavBar />
+        {children}
+      </body>
     </html>
   );
 }
