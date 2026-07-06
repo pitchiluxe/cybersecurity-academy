@@ -14,7 +14,7 @@ First of four planned subsystems for IT Playground: (1) auth/accounts — this s
 ## Architecture
 
 - **Database:** SQLite file at `data/app.db` via `better-sqlite3` (sync API, zero external services, matches "local only"). `data/` gitignored, like `.env.local`.
-- **Password hashing:** `bcrypt`, 10 rounds.
+- **Password hashing:** `bcryptjs` (pure JS, no native compile step), 10 rounds.
 - **Session:** signed JWT (via `jose`) in an httpOnly, sameSite=lax cookie. No server-side session table — the token itself carries `{ userId, email }` and a 30-day expiry. Secret read from a new `AUTH_SECRET` env var in `.env.local` (generated once, gitignored, never committed).
 - **Route protection:** `middleware.ts` at the project root checks the session cookie on every request to `/` and `/play/*`; redirects to `/login` if missing/invalid. Server-side gate — no flash-of-unauthenticated-content.
 
@@ -34,11 +34,13 @@ CREATE TABLE users (
 ## Auth flows
 
 - **`POST /api/auth/register`** — body `{ email, password }`. Validates email shape and password length (≥ 8 chars) → `400` on failure. Checks email uniqueness → `409` if taken. Hashes password, inserts row, issues session cookie, returns `{ user: { id, email } }`, `201`.
-- **`POST /api/auth/login`** — body `{ email, password }`. Looks up user, `bcrypt.compare`s password. `401` on any mismatch (same generic message for "no such user" and "wrong password" — don't leak which). On success, issues session cookie, returns `{ user }`, `200`.
+- **`POST /api/auth/login`** — body `{ email, password }`. Looks up user, `bcryptjs.compare`s password. `401` on any mismatch (same generic message for "no such user" and "wrong password" — don't leak which). On success, issues session cookie, returns `{ user }`, `200`.
 - **`POST /api/auth/logout`** — clears the cookie, `200`.
 - **`GET /api/auth/me`** — reads + verifies the cookie, returns `{ user }` or `401`. Used by the nav bar to show the logged-in email / a logout button.
 
-`lib/auth.ts` holds the pure, testable pieces: `hashPassword`, `verifyPassword`, `createSessionToken`, `verifySessionToken` — same pattern as `lib/parsing.ts`'s pure functions, unit-testable without a request/response.
+Split across two focused modules, same pattern as `lib/parsing.ts`'s pure functions — unit-testable without a request/response:
+- `lib/session.ts` — `createSessionToken`, `verifySessionToken`, `getCookieValue`, `SESSION_COOKIE_NAME`, `SESSION_DURATION_SECONDS`. This is what `middleware.ts` imports — keeps password hashing out of the middleware's dependency graph.
+- `lib/auth.ts` — `hashPassword`, `verifyPassword` (bcryptjs).
 
 ## Pages
 
@@ -57,10 +59,11 @@ Same friendly-copy pattern already used on the play page (`friendlyError` in `ap
 ## Testing
 
 Following the existing repo pattern (`lib/*.test.ts`, `app/api/**/route.test.ts`):
-- `lib/auth.test.ts` — hash/verify roundtrip, token create/verify roundtrip, expired/tampered token rejection.
+- `lib/auth.test.ts` — hash/verify roundtrip.
+- `lib/session.test.ts` — token create/verify roundtrip, expired/tampered token rejection, cookie header parsing.
 - `app/api/auth/register/route.test.ts`, `.../login/route.test.ts`, `.../logout/route.test.ts`, `.../me/route.test.ts` — mock `lib/db.ts` the same way existing route tests mock `lib/openrouter.ts`.
 - No test for `middleware.ts` itself (Next.js middleware testing needs a running server; out of proportion for this feature — covered by manual browser verification instead).
 
 ## New dependencies
 
-`better-sqlite3`, `bcrypt`, `jose`, plus `@types/better-sqlite3` and `@types/bcrypt` as dev deps.
+`better-sqlite3`, `bcryptjs`, `jose`, plus `@types/better-sqlite3` and `@types/bcryptjs` as dev deps.
