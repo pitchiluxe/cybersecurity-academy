@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createUser, findUserByEmail } from "@/lib/db";
 import { hashPassword } from "@/lib/auth";
-import { createSessionToken, SESSION_COOKIE_NAME, SESSION_DURATION_SECONDS } from "@/lib/session";
+import { createSessionToken, setSessionCookie } from "@/lib/session";
 
 const MAX_PASSWORD_LENGTH = 72;
 
@@ -31,11 +31,6 @@ export async function POST(request: Request) {
   const token = await createSessionToken({ userId: user.id, email: user.email });
 
   const res = NextResponse.json({ user: { id: user.id, email: user.email } }, { status: 201 });
-  res.cookies.set(SESSION_COOKIE_NAME, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    maxAge: SESSION_DURATION_SECONDS,
-    path: "/",
-  });
+  setSessionCookie(res, token);
   return res;
 }

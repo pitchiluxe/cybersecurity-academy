@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
+import type { NextResponse } from "next/server";
 
 export interface SessionPayload {
   userId: number;
@@ -34,6 +35,16 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
   } catch {
     return null;
   }
+}
+
+export function setSessionCookie(res: NextResponse, token: string): void {
+  res.cookies.set(SESSION_COOKIE_NAME, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: SESSION_DURATION_SECONDS,
+    path: "/",
+  });
 }
 
 export function getCookieValue(request: Request, name: string): string | undefined {

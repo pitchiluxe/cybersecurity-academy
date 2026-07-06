@@ -1,8 +1,10 @@
 import { SignJWT } from "jose";
+import { NextResponse } from "next/server";
 import {
   createSessionToken,
   verifySessionToken,
   getCookieValue,
+  setSessionCookie,
   SESSION_COOKIE_NAME,
 } from "./session";
 
@@ -48,6 +50,28 @@ describe("createSessionToken / verifySessionToken", () => {
       .sign(key);
     const payload = await verifySessionToken(expiredToken);
     expect(payload).toBeNull();
+  });
+});
+
+describe("setSessionCookie", () => {
+  const ORIGINAL_NODE_ENV = process.env.NODE_ENV;
+
+  afterEach(() => {
+    Object.defineProperty(process.env, "NODE_ENV", { value: ORIGINAL_NODE_ENV, configurable: true });
+  });
+
+  it("sets the secure flag when NODE_ENV is production", () => {
+    Object.defineProperty(process.env, "NODE_ENV", { value: "production", configurable: true });
+    const res = NextResponse.json({ ok: true });
+    setSessionCookie(res, "token-value");
+    expect(res.headers.get("set-cookie")).toContain("Secure");
+  });
+
+  it("does not set the secure flag when NODE_ENV is not production", () => {
+    Object.defineProperty(process.env, "NODE_ENV", { value: "test", configurable: true });
+    const res = NextResponse.json({ ok: true });
+    setSessionCookie(res, "token-value");
+    expect(res.headers.get("set-cookie")).not.toContain("Secure");
   });
 });
 
