@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   if (typeof password !== "string" || password.length < 8) {
     return NextResponse.json({ error: "Passwords must be at least 8 characters." }, { status: 400 });
   }
-  if (password.length > MAX_PASSWORD_LENGTH) {
+  if (Buffer.byteLength(password, "utf8") > MAX_PASSWORD_LENGTH) {
     return NextResponse.json({ error: "Passwords must be 72 characters or fewer." }, { status: 400 });
   }
   if (findUserByEmail(email)) {

@@ -42,6 +42,14 @@ describe("POST /api/auth/register", () => {
     expect(res.status).toBe(400);
   });
 
+  it("returns 400 for a password over 72 UTF-8 bytes but under 72 JS string-length units", async () => {
+    // "é" is 1 UTF-16 code unit but 2 UTF-8 bytes, so 40 of them is 40 chars / 80 bytes:
+    // long enough to trip a byte-length check, short enough to slip past a naive
+    // character-length check (which is exactly the gap this test guards against).
+    const res = await POST(makeRequest({ email: "a@b.com", password: "é".repeat(40) }));
+    expect(res.status).toBe(400);
+  });
+
   it("returns 409 when the email is already registered", async () => {
     mockedFindUserByEmail.mockReturnValue({ id: 1, email: "a@b.com", password_hash: "x", created_at: "now" });
     const res = await POST(makeRequest({ email: "a@b.com", password: "longenough" }));
