@@ -102,6 +102,13 @@ export function NavBar() {
             Courses
           </Link>
           <Link
+            href="/labs"
+            className="font-mono text-xs uppercase tracking-wide transition-colors duration-200 hover:opacity-80"
+            style={{ color: pathname?.startsWith("/labs") ? "var(--accent)" : "var(--ink-muted)" }}
+          >
+            Labs
+          </Link>
+          <Link
             href="/profile"
             className="font-mono text-xs uppercase tracking-wide transition-colors duration-200 hover:opacity-80"
             style={{ color: pathname === "/profile" ? "var(--accent)" : "var(--ink-muted)" }}
