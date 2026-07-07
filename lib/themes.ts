@@ -2,7 +2,7 @@
 // the data-theme attribute on <html>; the token values live in globals.css.
 export const THEME_STORAGE_KEY = "tba-theme";
 
-export type ThemeId = "lab" | "console" | "chalkboard" | "blueprint" | "amber";
+export type ThemeId = "midnight" | "lab" | "chalkboard" | "blueprint" | "amber";
 
 export interface ThemeMeta {
   id: ThemeId;
@@ -12,14 +12,20 @@ export interface ThemeMeta {
   swatch: { bg: string; surface: string; accent: string; ink: string };
 }
 
-export const DEFAULT_THEME: ThemeId = "lab";
+export const DEFAULT_THEME: ThemeId = "midnight";
 
 export const THEMES: ThemeMeta[] = [
   {
+    id: "midnight",
+    label: "Midnight",
+    description: "Indigo on deep navy — the default, dark and focused.",
+    swatch: { bg: "#070B12", surface: "#0D1421", accent: "#6366F1", ink: "#E2E8F0" },
+  },
+  {
     id: "lab",
-    label: "Computer Lab",
-    description: "Bright school-IT-room light theme with cool blue accents.",
-    swatch: { bg: "#F1F6FC", surface: "#FFFFFF", accent: "#2563EB", ink: "#0F1E33" },
+    label: "Daylight",
+    description: "Clean zinc-neutral light theme with indigo accents.",
+    swatch: { bg: "#F7F8FA", surface: "#FFFFFF", accent: "#6366F1", ink: "#0A0A0A" },
   },
   {
     id: "blueprint",
@@ -32,12 +38,6 @@ export const THEMES: ThemeMeta[] = [
     label: "Chalkboard",
     description: "Deep classroom green with warm chalk-white text.",
     swatch: { bg: "#14261E", surface: "#1B3126", accent: "#FCD34D", ink: "#ECF3E9" },
-  },
-  {
-    id: "console",
-    label: "Night Console",
-    description: "Classic dark slate service-desk look.",
-    swatch: { bg: "#0B1220", surface: "#111A2E", accent: "#60A5FA", ink: "#E2E8F0" },
   },
   {
     id: "amber",

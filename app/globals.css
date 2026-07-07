@@ -4,60 +4,61 @@
 
 /* ── Themes ──────────────────────────────────────────────────
    Every theme is a full set of design tokens. The default (:root)
-   is "Computer Lab" — a bright, friendly school-IT-room palette.
+   is "Midnight" — indigo on deep navy, matching the AIHub look.
    The active theme is chosen per-browser and applied via the
    data-theme attribute on <html> (see lib/themes.ts + layout.tsx).
 */
 :root,
-:root[data-theme="lab"] {
-  --bg: #F1F6FC;
-  --surface: #FFFFFF;
-  --surface-2: #E6EEF8;
-  --ink: #0F1E33;
-  --ink-muted: #45566E;
-  --ink-faint: #6B7C93;
-  --border: #C9D8EC;
-  --accent: #2563EB;
+:root[data-theme="midnight"],
+:root[data-theme="dark"],
+:root[data-theme="console"] {
+  --bg: #070B12;
+  --surface: #0D1421;
+  --surface-2: #152033;
+  --ink: #E2E8F0;
+  --ink-muted: #94A3B8;
+  --ink-faint: #64748B;
+  --border: #1A2540;
+  --accent: #6366F1;
   --accent-ink: #FFFFFF;
-  --accent-soft: #DCEAFE;
-  --accent-line: #BCD3FA;
+  --accent-soft: rgba(99, 102, 241, 0.14);
+  --accent-line: rgba(99, 102, 241, 0.38);
+  --warn: #F59E0B;
+  --warn-soft: rgba(245, 158, 11, 0.14);
+  --warn-line: rgba(245, 158, 11, 0.4);
+  --danger: #EF4444;
+  --danger-soft: rgba(239, 68, 68, 0.14);
+  --danger-line: rgba(239, 68, 68, 0.4);
+  --good: #10B981;
+  --good-soft: rgba(16, 185, 129, 0.14);
+  --good-line: rgba(16, 185, 129, 0.4);
+  --terminal-bg: #050810;
+  --terminal-ink: #86EFAC;
+}
+
+/* Daylight — indigo on a clean zinc-neutral white (AIHub light). */
+:root[data-theme="lab"] {
+  --bg: #F7F8FA;
+  --surface: #FFFFFF;
+  --surface-2: #F4F4F5;
+  --ink: #0A0A0A;
+  --ink-muted: #52525B;
+  --ink-faint: #71717A;
+  --border: #E4E4E7;
+  --accent: #6366F1;
+  --accent-ink: #FFFFFF;
+  --accent-soft: rgba(99, 102, 241, 0.10);
+  --accent-line: rgba(99, 102, 241, 0.28);
   --warn: #B45309;
   --warn-soft: #FEF3C7;
   --warn-line: #FDE68A;
   --danger: #DC2626;
   --danger-soft: #FEE2E2;
   --danger-line: #FECACA;
-  --good: #15803D;
-  --good-soft: #DCFCE7;
-  --good-line: #BBF7D0;
-  --terminal-bg: #0F1E33;
-  --terminal-ink: #86EFAC;
-}
-
-/* Night Console — the classic dark slate/blue service-desk look. */
-:root[data-theme="console"],
-:root[data-theme="dark"] {
-  --bg: #0B1220;
-  --surface: #111A2E;
-  --surface-2: #182339;
-  --ink: #E2E8F0;
-  --ink-muted: #94A3B8;
-  --ink-faint: #64748B;
-  --border: #1E293B;
-  --accent: #60A5FA;
-  --accent-ink: #0B1220;
-  --accent-soft: rgba(96, 165, 250, 0.12);
-  --accent-line: rgba(96, 165, 250, 0.35);
-  --warn: #FBBF24;
-  --warn-soft: rgba(251, 191, 36, 0.12);
-  --warn-line: rgba(251, 191, 36, 0.4);
-  --danger: #F87171;
-  --danger-soft: rgba(248, 113, 113, 0.12);
-  --danger-line: rgba(248, 113, 113, 0.4);
-  --good: #4ADE80;
-  --good-soft: rgba(74, 222, 128, 0.12);
-  --good-line: rgba(74, 222, 128, 0.4);
-  --terminal-bg: #060B14;
+  --good: #059669;
+  --good-soft: #D1FAE5;
+  --good-line: #A7F3D0;
+  --terminal-bg: #0A0A0A;
   --terminal-ink: #86EFAC;
 }
 
@@ -154,11 +155,14 @@ body {
 body {
   background: var(--bg);
   color: var(--ink);
+  font-family: var(--font-body), "Inter", system-ui, sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-body { font-family: var(--font-body), system-ui, sans-serif; }
-/* Headings share Plus Jakarta Sans; heavier weight + tighter tracking set the hierarchy. */
-.font-display { font-family: var(--font-body), system-ui, sans-serif; letter-spacing: -0.02em; }
+/* Headings share the body typeface (Inter); heavier weight + tighter tracking set the hierarchy. */
+.font-display { font-family: var(--font-body), "Inter", system-ui, sans-serif; letter-spacing: -0.02em; }
 .font-mono { font-family: var(--font-mono), ui-monospace, monospace; font-variant-numeric: tabular-nums; }
 
 /* ── Pills / badges ──────────────────────────────────────── */
