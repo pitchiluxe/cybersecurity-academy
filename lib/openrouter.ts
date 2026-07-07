@@ -1,4 +1,4 @@
-import { getSettings } from "./settings";
+import { getSettings, type Provider } from "./settings";
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -25,6 +25,41 @@ const MAX_ATTEMPTS = 3;
 // Free-model pools are often congested (429) or briefly down (5xx); both are
 // worth one short retry before giving up.
 const RETRYABLE_STATUSES = new Set([429, 502, 503]);
+
+// Turn raw provider error payloads into a short, human message. The upstream
+// 429 body is a deeply nested blob of provider retries — never show it as-is.
+export function friendlyProviderError(status: number, body: unknown, provider: Provider): string {
+  if (status === 429) {
+    if (provider === "ollama") {
+      return "Your local Ollama server is overloaded. Wait a moment and try again.";
+    }
+    return (
+      "The free AI tier is busy or you've hit today's free request cap. " +
+      "Wait a minute and try again, switch models in Settings, or add your own " +
+      "OpenRouter API key (Settings) to lift the limit."
+    );
+  }
+  if (status === 401 || status === 403) {
+    return "The AI provider rejected the API key. Check your token in Settings / .env.local.";
+  }
+  if (status >= 500) {
+    return "The AI provider is temporarily unavailable. Please try again in a moment.";
+  }
+  // 4xx we don't specifically handle — surface the provider's own message if any.
+  const msg =
+    typeof body === "object" && body !== null && "error" in body
+      ? // OpenRouter shape is { error: { message } } or { error: string }
+        (() => {
+          const e = (body as { error: unknown }).error;
+          if (typeof e === "string") return e;
+          if (typeof e === "object" && e !== null && "message" in e && typeof (e as { message: unknown }).message === "string") {
+            return (e as { message: string }).message;
+          }
+          return null;
+        })()
+      : null;
+  return msg ? `AI request failed (${status}): ${msg}` : `AI request failed (${status}).`;
+}
 
 function getRetryDelayMs(attempt: number): number {
   if (process.env.NODE_ENV === "test") return 0;
@@ -111,7 +146,7 @@ export async function callOpenRouter(messages: ChatMessage[]): Promise<string> {
       const errBody = await response.json().catch(() => ({}));
       lastError = new OpenRouterRequestError(
         response.status,
-        `OpenRouter request failed (${response.status}): ${JSON.stringify(errBody)}`
+        friendlyProviderError(response.status, errBody, provider)
       );
       if (RETRYABLE_STATUSES.has(response.status) && attempt < MAX_ATTEMPTS - 1) {
         await sleep(getRetryDelayMs(attempt));

@@ -46,9 +46,10 @@ export default function LoginPage() {
               Train like a real Tier-1 technician
             </h2>
             <p className="mt-3 text-sm leading-relaxed" style={{ color: "var(--ink-muted)" }}>
-              HelpDesk Console is an AI-powered IT support training simulator. Work a live
-              ticket queue, chat with realistic end-users, run remote diagnostics, and get
-              graded on every resolution — just like a real service desk shift.
+              TechBench Academy is an AI-powered IT support training lab. Work a live
+              ticket queue, chat with realistic end-users, run remote diagnostics, wire
+              equipment in 3D labs, and get graded on every resolution — just like a real
+              service desk shift.
             </p>
             <ul className="mt-5 flex flex-col gap-3 text-sm" style={{ color: "var(--ink-muted)" }}>
               {[
@@ -82,10 +83,10 @@ export default function LoginPage() {
           </span>
           <div>
             <div className="font-display text-sm font-bold" style={{ color: "var(--ink)" }}>
-              HelpDesk Console
+              TechBench Academy
             </div>
             <div className="font-mono text-[10px] uppercase tracking-widest" style={{ color: "var(--ink-faint)" }}>
-              Agent sign-in
+              Trainee sign-in
             </div>
           </div>
         </div>

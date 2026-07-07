@@ -69,10 +69,10 @@ export function NavBar() {
           </span>
           <span className="flex flex-col leading-tight">
             <span className="font-display text-sm font-bold" style={{ color: "var(--ink)" }}>
-              HelpDesk Console
+              TechBench Academy
             </span>
             <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: "var(--ink-faint)" }}>
-              Training simulator
+              IT training lab
             </span>
           </span>
         </Link>

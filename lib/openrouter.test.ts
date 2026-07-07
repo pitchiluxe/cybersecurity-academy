@@ -1,4 +1,4 @@
-import { callOpenRouter, MissingApiKeyError, OpenRouterRequestError } from "./openrouter";
+import { callOpenRouter, MissingApiKeyError, OpenRouterRequestError, friendlyProviderError } from "./openrouter";
 
 const ORIGINAL_ENV = process.env;
 
@@ -14,6 +14,26 @@ beforeEach(() => {
 afterEach(() => {
   process.env = ORIGINAL_ENV;
   jest.resetAllMocks();
+});
+
+describe("friendlyProviderError", () => {
+  const rawBody = { error: { message: "Provider returned error", code: 429, metadata: { raw: "…" } } };
+
+  it("gives a clean, JSON-free message for a 429 without leaking the raw body", () => {
+    const msg = friendlyProviderError(429, rawBody, "openrouter");
+    expect(msg).toMatch(/free request cap|rate|Settings/i);
+    expect(msg).not.toContain("{");
+    expect(msg).not.toContain("metadata");
+  });
+
+  it("distinguishes an Ollama overload from OpenRouter limits", () => {
+    expect(friendlyProviderError(429, {}, "ollama")).toMatch(/Ollama/i);
+  });
+
+  it("flags auth failures and provider outages", () => {
+    expect(friendlyProviderError(401, {}, "openrouter")).toMatch(/key/i);
+    expect(friendlyProviderError(503, {}, "openrouter")).toMatch(/temporarily unavailable/i);
+  });
 });
 
 describe("callOpenRouter", () => {

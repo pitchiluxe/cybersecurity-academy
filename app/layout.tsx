@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { NavBar } from "@/components/NavBar";
+import { THEME_INIT_SCRIPT } from "@/lib/themes";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -18,13 +19,16 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "HelpDesk Console — IT Support Training Simulator",
-  description: "Work a simulated IT service desk: triage tickets, run remote diagnostics, resolve issues, get graded.",
+  title: "TechBench Academy — IT Support Training Lab",
+  description: "Your training lab for real IT support: triage tickets, run remote diagnostics, wire 3D labs, and earn certifications.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${jakarta.variable} ${jetBrainsMono.variable}`}>
+    <html lang="en" className={`${jakarta.variable} ${jetBrainsMono.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body>
         <NavBar />
         {children}

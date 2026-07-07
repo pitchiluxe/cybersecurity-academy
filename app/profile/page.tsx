@@ -136,7 +136,7 @@ export default function ProfilePage() {
                   style={{ borderColor: "var(--accent)", background: "var(--surface)" }}
                 >
                   <div className="font-mono text-[10px] uppercase tracking-widest" style={{ color: "var(--ink-faint)" }}>
-                    HelpDesk Console · Certificate of Completion
+                    TechBench Academy · Certificate of Completion
                   </div>
                   <div className="font-display mt-4 text-2xl font-bold" style={{ color: "var(--ink)" }}>
                     {t.title}
