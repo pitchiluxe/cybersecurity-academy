@@ -107,11 +107,13 @@ export function getCourseRow(userId: number, track: string): { id: number; conte
     .get(userId, track) as { id: number; content_json: string } | undefined;
 }
 
+// Concurrent generations of the same course (e.g. React StrictMode double
+// effects) race on the UNIQUE(user_id, track) constraint; first write wins.
 export function saveCourse(userId: number, track: string, contentJson: string): number {
-  const info = getDb()
-    .prepare("INSERT INTO courses (user_id, track, content_json) VALUES (?, ?, ?)")
+  getDb()
+    .prepare("INSERT INTO courses (user_id, track, content_json) VALUES (?, ?, ?) ON CONFLICT(user_id, track) DO NOTHING")
     .run(userId, track, contentJson);
-  return Number(info.lastInsertRowid);
+  return getCourseRow(userId, track)!.id;
 }
 
 export function getPassedModuleIndexes(courseId: number): number[] {

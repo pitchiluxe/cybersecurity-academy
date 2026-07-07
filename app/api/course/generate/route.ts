@@ -37,8 +37,14 @@ export async function POST(request: Request) {
     try {
       const text = await callOpenRouter(messages);
       const course = parseCourse(text, track);
-      saveCourse(session.userId, track, JSON.stringify(course));
-      return NextResponse.json({ course: stripAnswers(course), passedModules: [], certified: false }, { status: 200 });
+      // Re-read after save: a concurrent generation may have won the
+      // UNIQUE(user_id, track) race, and both callers must see one course.
+      const courseId = saveCourse(session.userId, track, JSON.stringify(course));
+      const stored = JSON.parse(getCourseRow(session.userId, track)!.content_json) as Course;
+      return NextResponse.json(
+        { course: stripAnswers(stored), passedModules: getPassedModuleIndexes(courseId), certified: false },
+        { status: 200 }
+      );
     } catch (err) {
       if (err instanceof MissingApiKeyError) {
         return NextResponse.json({ error: err.message }, { status: 503 });

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { NavBar } from "@/components/NavBar";
+
 
 interface TrackProgress {
   id: string;
@@ -37,9 +37,6 @@ export default function ProfilePage() {
 
   return (
     <>
-      <div className="print-hide">
-        <NavBar />
-      </div>
       <main className="mx-auto max-w-5xl px-6 py-8">
         <div className="print-hide">
           <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>

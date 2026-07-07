@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { NavBar } from "@/components/NavBar";
+
 
 interface ClientQuizQuestion {
   question: string;
@@ -137,7 +137,7 @@ export default function CourseTrackPage() {
   if (loadError && !course) {
     return (
       <>
-        <NavBar />
+
         <main className="mx-auto max-w-3xl px-6 py-12 text-center">
           <p role="alert" className="text-sm" style={{ color: "var(--warn)" }}>
             {loadError}
@@ -153,7 +153,7 @@ export default function CourseTrackPage() {
   if (!course) {
     return (
       <>
-        <NavBar />
+
         <main className="mx-auto max-w-3xl px-6 py-12 text-center">
           <p className="font-mono text-sm" style={{ color: "var(--ink-faint)" }}>
             Generating your course… this one-time step can take up to a minute.
@@ -167,7 +167,7 @@ export default function CourseTrackPage() {
 
   return (
     <>
-      <NavBar />
+
       <main className="mx-auto max-w-6xl px-6 py-6">
         <div className="flex items-center justify-between gap-4">
           <div>

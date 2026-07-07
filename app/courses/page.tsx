@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { NavBar } from "@/components/NavBar";
+
 
 interface TrackProgress {
   id: string;
@@ -29,7 +29,7 @@ export default function CoursesPage() {
 
   return (
     <>
-      <NavBar />
+
       <main className="mx-auto max-w-5xl px-6 py-8">
         <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>
           Certification courses

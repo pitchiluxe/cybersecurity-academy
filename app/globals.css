@@ -341,7 +341,8 @@ body { font-family: var(--font-body), system-ui, sans-serif; }
 }
 
 @media print {
-  .print-hide {
+  .print-hide,
+  header {
     display: none !important;
   }
   .cert-card {
