@@ -54,6 +54,16 @@ const SCHEMA = `
 
 function getClient(): Client {
   if (!client) {
+    // On a serverless host (Vercel) the filesystem is read-only, so a `file:`
+    // URL can never be written. Fail loudly with the fix instead of an opaque
+    // "database is locked / readonly" error on the first query.
+    if (process.env.VERCEL && DB_URL.startsWith("file:")) {
+      throw new Error(
+        "TURSO_DATABASE_URL is not set. On Vercel the local SQLite file is not writable — " +
+          "create a Turso database and set TURSO_DATABASE_URL + TURSO_AUTH_TOKEN in the project's " +
+          "Environment Variables, then redeploy."
+      );
+    }
     client = createClient({ url: DB_URL, authToken: DB_AUTH_TOKEN, intMode: "number" });
   }
   return client;
