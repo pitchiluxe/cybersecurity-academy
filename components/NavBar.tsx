@@ -3,10 +3,35 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { HEARTBEAT_INTERVAL_MS } from "@/lib/presence";
 
 export function NavBar() {
   const pathname = usePathname();
   const [email, setEmail] = useState<string | null>(null);
+  const [online, setOnline] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function beat() {
+      if (document.hidden) return;
+      try {
+        const res = await fetch("/api/presence", { method: "POST" });
+        if (!res.ok) return;
+        const body = await res.json();
+        if (!cancelled && typeof body.online === "number") setOnline(body.online);
+      } catch {
+        /* offline blip — keep last value */
+      }
+    }
+
+    beat();
+    const id = setInterval(beat, HEARTBEAT_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,10 +81,11 @@ export function NavBar() {
           <span
             className="status-dot-wrap font-mono text-[11px] uppercase tracking-wide"
             style={{ color: "var(--ink-muted)" }}
-            title="Systems online"
+            title={online !== null ? `${online} user${online === 1 ? "" : "s"} online now` : "Systems online"}
           >
             <span className="status-dot" aria-hidden="true" />
-            <span className="hidden md:inline">Systems online</span>
+            <span className="hidden md:inline">{online !== null ? `${online} online` : "Systems online"}</span>
+            <span className="md:hidden">{online !== null ? online : ""}</span>
           </span>
           <Link
             href="/"
@@ -67,6 +93,20 @@ export function NavBar() {
             style={{ color: pathname === "/" ? "var(--accent)" : "var(--ink-muted)" }}
           >
             Queue
+          </Link>
+          <Link
+            href="/courses"
+            className="font-mono text-xs uppercase tracking-wide transition-colors duration-200 hover:opacity-80"
+            style={{ color: pathname?.startsWith("/courses") ? "var(--accent)" : "var(--ink-muted)" }}
+          >
+            Courses
+          </Link>
+          <Link
+            href="/profile"
+            className="font-mono text-xs uppercase tracking-wide transition-colors duration-200 hover:opacity-80"
+            style={{ color: pathname === "/profile" ? "var(--accent)" : "var(--ink-muted)" }}
+          >
+            Profile
           </Link>
           <Link
             href="/settings"
