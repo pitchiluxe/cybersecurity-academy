@@ -52,7 +52,13 @@ export function NavBar() {
   }, [pathname]);
 
   async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
+    // Best-effort: clear the server session, but never let a transient network
+    // error trap the user on an error overlay — always land them on /login.
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      /* offline or server unreachable — fall through and navigate anyway */
+    }
     // Full navigation so cached authenticated pages are dropped with the session.
     window.location.assign("/login");
   }
