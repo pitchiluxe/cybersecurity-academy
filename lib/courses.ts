@@ -181,6 +181,22 @@ export function parseCourse(text: string, track: TrackId): Course {
   return { track, title, modules };
 }
 
+export interface TutorMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export function buildTutorMessages(track: TrackId, module: CourseModule, chat: TutorMessage[]): ChatMessage[] {
+  const meta = getTrack(track);
+  const system = `You are a patient, encouraging IT instructor tutoring a helpdesk trainee through a ${meta.title} course module titled "${module.title}".
+The lesson text the trainee is currently reading:
+---
+${module.lesson}
+---
+Explain concepts clearly, answer questions about the material, and always connect ideas to real-world troubleshooting the trainee will do on the job (concrete commands, symptoms, and fixes) so they are ready for real tickets. If asked something outside the lesson, still help, but relate it back to ${meta.title} objectives. Keep replies under 200 words unless a step-by-step walkthrough is needed. Never reveal quiz answers.`;
+  return [{ role: "system", content: system }, ...chat];
+}
+
 export type ClientCourse = {
   track: TrackId;
   title: string;

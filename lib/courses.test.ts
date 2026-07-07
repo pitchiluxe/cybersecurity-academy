@@ -8,6 +8,7 @@ import {
   makeCertCode,
   QUIZ_PASS_PERCENT,
   buildCourseMessages,
+  buildTutorMessages,
   parseCourse,
   stripAnswers,
   type Course,
@@ -150,6 +151,22 @@ describe("parseCourse", () => {
   it("rejects out-of-range answerIndex", () => {
     const bad = good.replace('"answerIndex":0', '"answerIndex":7');
     expect(() => parseCourse(bad, "networkplus")).toThrow(/answerIndex/);
+  });
+});
+
+describe("buildTutorMessages", () => {
+  it("embeds the lesson and maps chat turns", () => {
+    const module: CourseModule = { title: "DNS", lesson: "DNS resolves names.", quiz: [] };
+    const msgs = buildTutorMessages("networkplus", module, [
+      { role: "user", content: "What is DNS?" },
+      { role: "assistant", content: "It resolves names." },
+      { role: "user", content: "Why does nslookup time out?" },
+    ]);
+    expect(msgs[0].role).toBe("system");
+    expect(msgs[0].content).toContain("DNS resolves names.");
+    expect(msgs[0].content).toContain("CompTIA Network+");
+    expect(msgs).toHaveLength(4);
+    expect(msgs[3]).toEqual({ role: "user", content: "Why does nslookup time out?" });
   });
 });
 
