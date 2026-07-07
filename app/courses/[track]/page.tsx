@@ -31,6 +31,14 @@ interface QuizResult {
   certIssued: boolean;
 }
 
+const TRACK_LABS: Record<string, { href: string; label: string }> = {
+  networkplus: { href: "/labs/wiring", label: "Open the 3D wiring lab" },
+  ccna: { href: "/labs/wiring", label: "Open the 3D wiring lab" },
+  ccnpsec: { href: "/labs/fortigate", label: "Open the FortiGate lab" },
+  fortinet: { href: "/labs/fortigate", label: "Open the FortiGate lab" },
+  securityx: { href: "/labs/fortigate", label: "Open the FortiGate lab" },
+};
+
 export default function CourseTrackPage() {
   const params = useParams<{ track: string }>();
   const track = params.track;
@@ -207,6 +215,11 @@ export default function CourseTrackPage() {
             </h1>
           </div>
           <div className="flex items-center gap-3">
+            {TRACK_LABS[track] && (
+              <Link href={TRACK_LABS[track].href} className="btn-ghost">
+                {TRACK_LABS[track].label}
+              </Link>
+            )}
             {certified && (
               <span
                 className="rounded-full border px-3 py-1 font-mono text-[11px] uppercase"
