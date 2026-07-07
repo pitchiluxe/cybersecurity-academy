@@ -23,7 +23,11 @@ export function getDb(): Database.Database {
       email TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    )
+    );
+    CREATE TABLE IF NOT EXISTS presence (
+      user_id INTEGER PRIMARY KEY,
+      last_seen INTEGER NOT NULL
+    );
   `);
   return db;
 }
@@ -44,4 +48,17 @@ export function createUser(email: string, passwordHash: string): UserRow {
     .prepare("INSERT INTO users (email, password_hash) VALUES (?, ?)")
     .run(email, passwordHash);
   return getDb().prepare("SELECT * FROM users WHERE id = ?").get(info.lastInsertRowid) as UserRow;
+}
+
+export function upsertPresence(userId: number, nowMs: number): void {
+  getDb()
+    .prepare(
+      "INSERT INTO presence (user_id, last_seen) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET last_seen = excluded.last_seen"
+    )
+    .run(userId, nowMs);
+}
+
+export function getPresenceTimestamps(): number[] {
+  const rows = getDb().prepare("SELECT last_seen FROM presence").all() as { last_seen: number }[];
+  return rows.map((r) => r.last_seen);
 }
