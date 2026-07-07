@@ -5,3 +5,6 @@ node_modules/
 dist/
 *.log
 data/
+tsconfig.tsbuildinfo
+# stray files written by a notify hook to a malformed path
+*claude-notify-signals*
