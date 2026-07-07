@@ -139,8 +139,17 @@
   --terminal-ink: #FFB000;
 }
 
-html { color-scheme: light dark; }
-body { transition: background-color 200ms ease, color 200ms ease; }
+html {
+  color-scheme: light dark;
+  /* Reserve the scrollbar gutter on both sides so centered content never shifts
+     left when a scrollbar appears, and never jumps between pages. */
+  scrollbar-gutter: stable both-edges;
+}
+body {
+  transition: background-color 200ms ease, color 200ms ease;
+  /* Guard against accidental horizontal overflow pushing a bottom scrollbar. */
+  overflow-x: hidden;
+}
 
 body {
   background: var(--bg);
