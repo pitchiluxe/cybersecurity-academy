@@ -5,7 +5,14 @@ export type ScenarioCategory =
   | "app-crash"
   | "malware"
   | "hardware"
-  | "vm";
+  | "vm"
+  | "phishing"
+  | "firewall"
+  | "siem"
+  | "access"
+  | "cloud"
+  | "linux"
+  | "pentest";
 
 export interface ScenarioSeed {
   category: ScenarioCategory;

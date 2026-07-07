@@ -15,6 +15,13 @@ export const SCENARIO_CATEGORIES: {
   { id: "malware", label: "Malware / Quarantine", blurb: "Suspicious alerts, quarantined files, cleanup.", ticketId: "TCK-4475", priority: "P1" },
   { id: "hardware", label: "Hardware Failure", blurb: "Blue screens, dead peripherals, boot failures.", ticketId: "TCK-4476", priority: "P1" },
   { id: "vm", label: "Virtual Machine / VDI", blurb: "VMs that won't boot, snapshots, RDP/VDI sessions, hypervisor trouble.", ticketId: "TCK-4477", priority: "P2" },
+  { id: "phishing", label: "Phishing / Social Engineering", blurb: "Suspicious emails, credential lures, reported clicks.", ticketId: "TCK-4478", priority: "P1" },
+  { id: "firewall", label: "Firewall / Network Security", blurb: "Blocked apps, NAT and policy issues, tunnel drops.", ticketId: "TCK-4479", priority: "P2" },
+  { id: "siem", label: "SIEM / IDS Alert", blurb: "Correlated alerts, brute-force spikes, odd beaconing.", ticketId: "TCK-4480", priority: "P1" },
+  { id: "access", label: "Access Control / IAM", blurb: "Group membership, least privilege, SSO and provisioning.", ticketId: "TCK-4481", priority: "P2" },
+  { id: "cloud", label: "Cloud / SaaS", blurb: "Tenant settings, sync failures, storage and licensing.", ticketId: "TCK-4482", priority: "P2" },
+  { id: "linux", label: "Linux Server", blurb: "Services down, disk full, permissions, cron gone wrong.", ticketId: "TCK-4483", priority: "P2" },
+  { id: "pentest", label: "Vulnerability / Pentest Finding", blurb: "Scan findings, exposed services, patch verification.", ticketId: "TCK-4484", priority: "P2" },
 ];
 
 const CATEGORY_LABELS: Record<ScenarioCategory, string> = Object.fromEntries(

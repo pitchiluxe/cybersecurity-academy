@@ -2,10 +2,29 @@ import { SCENARIO_CATEGORIES, isScenarioCategory, buildStartMessages, buildQueue
 import type { ScenarioSeed, TranscriptMessage } from "./types";
 
 describe("SCENARIO_CATEGORIES", () => {
-  it("has exactly the seven fixed categories", () => {
+  it("has exactly the fourteen fixed categories", () => {
     expect(SCENARIO_CATEGORIES.map((c) => c.id).sort()).toEqual(
-      ["app-crash", "hardware", "malware", "network", "password", "printer", "vm"].sort()
+      [
+        "app-crash", "hardware", "malware", "network", "password", "printer", "vm",
+        "phishing", "firewall", "siem", "access", "cloud", "linux", "pentest",
+      ].sort()
     );
+  });
+});
+
+describe("expanded category catalog (v3)", () => {
+  it("has 14 categories with unique ids and ticket ids", () => {
+    expect(SCENARIO_CATEGORIES).toHaveLength(14);
+    const ids = SCENARIO_CATEGORIES.map((c) => c.id);
+    expect(new Set(ids).size).toBe(14);
+    const ticketIds = SCENARIO_CATEGORIES.map((c) => c.ticketId);
+    expect(new Set(ticketIds).size).toBe(14);
+  });
+
+  it("includes the security categories", () => {
+    for (const id of ["phishing", "firewall", "siem", "access", "cloud", "linux", "pentest"]) {
+      expect(isScenarioCategory(id)).toBe(true);
+    }
   });
 });
 
