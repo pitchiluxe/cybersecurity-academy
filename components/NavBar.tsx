@@ -88,9 +88,9 @@ export function NavBar() {
             <span className="md:hidden">{online !== null ? online : ""}</span>
           </span>
           <Link
-            href="/"
+            href="/queue"
             className="font-mono text-xs uppercase tracking-wide transition-colors duration-200 hover:opacity-80"
-            style={{ color: pathname === "/" ? "var(--accent)" : "var(--ink-muted)" }}
+            style={{ color: pathname === "/queue" ? "var(--accent)" : "var(--ink-muted)" }}
           >
             Queue
           </Link>
