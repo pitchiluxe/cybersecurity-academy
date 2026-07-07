@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { getCookieValue, verifySessionToken, SESSION_COOKIE_NAME } from "@/lib/session";
+import { recordTicketResult } from "@/lib/db";
+import { checkCertsForCategory } from "@/lib/certification";
 import { buildGradeMessages } from "@/lib/scenarios";
 import { callOpenRouter, MissingApiKeyError, OpenRouterRequestError } from "@/lib/openrouter";
 import { parseGradeResult, ParseError } from "@/lib/parsing";
@@ -22,7 +25,14 @@ export async function POST(request: Request) {
     try {
       const text = await callOpenRouter(messages);
       const result = parseGradeResult(text);
-      return NextResponse.json({ result, rootCause: seed.rootCause }, { status: 200 });
+      const token = getCookieValue(request, SESSION_COOKIE_NAME);
+      const session = token ? await verifySessionToken(token) : null;
+      let newCertificates: string[] = [];
+      if (session) {
+        recordTicketResult(session.userId, seed.category, result.score);
+        newCertificates = checkCertsForCategory(session.userId, seed.category);
+      }
+      return NextResponse.json({ result, rootCause: seed.rootCause, newCertificates }, { status: 200 });
     } catch (err) {
       if (err instanceof MissingApiKeyError) {
         return NextResponse.json({ error: err.message }, { status: 503 });
