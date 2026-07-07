@@ -39,6 +39,16 @@ describe("parseVmSpec", () => {
     const bad = JSON.stringify({ ...spec, password: "" });
     expect(() => parseVmSpec(bad)).toThrow(/password/);
   });
+
+  it("repairs unescaped Windows-path backslashes the model tends to emit", () => {
+    const sloppy = JSON.stringify(spec).replace(
+      '"C:\\\\Windows\\\\System32\\\\drivers\\\\etc\\\\hosts"',
+      '"C:\\Windows\\System32\\drivers\\etc\\hosts"'
+    );
+    expect(sloppy).toContain("C:\\Windows"); // single backslashes = invalid JSON
+    const parsed = parseVmSpec(sloppy);
+    expect(parsed.files[0].path).toBe("C:\\Windows\\System32\\drivers\\etc\\hosts");
+  });
 });
 
 describe("buildVmExecMessages", () => {

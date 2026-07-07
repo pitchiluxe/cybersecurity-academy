@@ -48,13 +48,23 @@ function requireStr(value: unknown, field: string): string {
   return value;
 }
 
+// Models frequently emit Windows paths with single backslashes ("C:\Windows"),
+// which are invalid JSON escapes; double any backslash not starting a valid one.
+function repairInvalidEscapes(json: string): string {
+  return json.replace(/\\(?!["\\/bfnrtu])/g, "\\\\");
+}
+
 export function parseVmSpec(text: string): VmSpec {
+  const json = extractJsonFromText(text);
   let raw: unknown;
   try {
-    raw = JSON.parse(extractJsonFromText(text));
-  } catch (err) {
-    if (err instanceof ParseError) throw err;
-    throw new ParseError(`Failed to JSON.parse VM spec: ${(err as Error).message}`);
+    raw = JSON.parse(json);
+  } catch {
+    try {
+      raw = JSON.parse(repairInvalidEscapes(json));
+    } catch (err) {
+      throw new ParseError(`Failed to JSON.parse VM spec: ${(err as Error).message}`);
+    }
   }
   if (typeof raw !== "object" || raw === null) throw new ParseError("VM spec payload was not a JSON object");
   const obj = raw as Record<string, unknown>;
