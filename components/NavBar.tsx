@@ -68,6 +68,7 @@ export function NavBar() {
     { href: "/courses", label: "Courses", active: !!pathname?.startsWith("/courses") },
     { href: "/labs", label: "Labs", active: !!pathname?.startsWith("/labs") },
     { href: "/profile", label: "Profile", active: pathname === "/profile" },
+    { href: "/contact", label: "Contact", active: pathname === "/contact" },
   ];
 
   const onlineTitle = online !== null ? `${online} user${online === 1 ? "" : "s"} online now` : "Systems online";
