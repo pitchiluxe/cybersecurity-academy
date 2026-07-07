@@ -33,7 +33,44 @@ export default function LoginPage() {
 
   return (
     <main className="auth-shell">
-      <div className="auth-card">
+      <div className="flex w-full max-w-4xl flex-col-reverse items-stretch gap-6 md:flex-row">
+        <section
+          className="flex flex-1 flex-col justify-between rounded-2xl border p-8"
+          style={{ borderColor: "var(--border)", background: "var(--surface)" }}
+        >
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-widest" style={{ color: "var(--accent)" }}>
+              What is this?
+            </div>
+            <h2 className="font-display mt-2 text-xl font-bold" style={{ color: "var(--ink)" }}>
+              Train like a real Tier-1 technician
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed" style={{ color: "var(--ink-muted)" }}>
+              HelpDesk Console is an AI-powered IT support training simulator. Work a live
+              ticket queue, chat with realistic end-users, run remote diagnostics, and get
+              graded on every resolution — just like a real service desk shift.
+            </p>
+            <ul className="mt-5 flex flex-col gap-3 text-sm" style={{ color: "var(--ink-muted)" }}>
+              {[
+                "AI-generated tickets across network, hardware, security and more",
+                "Live chat with simulated end-users who react like real people",
+                "Remote diagnostics and hands-on virtual machine labs",
+                "Certification courses (A+, Network+, Security+, CCNA) with an AI tutor",
+                "Earn certificates saved to your profile as you master each track",
+              ].map((line) => (
+                <li key={line} className="flex items-start gap-2">
+                  <span aria-hidden="true" style={{ color: "var(--accent)" }}>✓</span>
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <p className="mt-8 font-mono text-[11px] uppercase tracking-widest" style={{ color: "var(--ink-faint)" }}>
+            By Erick Omari
+          </p>
+        </section>
+
+        <div className="auth-card">
         <div className="auth-brand">
           <span className="brand-mark" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -107,6 +144,7 @@ export default function LoginPage() {
             Create one
           </Link>
         </p>
+        </div>
       </div>
     </main>
   );
