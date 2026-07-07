@@ -52,7 +52,8 @@ certifications, hands-on **3D equipment labs**, simulated **virtual machines**, 
 | 🔥 **3D FortiGate lab** | Rack and cable a FortiGate 60F, then configure it for real over a simulated **FortiOS CLI** — interfaces, policies, NAT, web filtering. |
 | 💻 **Simulated VM labs** | A full fake machine (lock screen + terminal/settings/files) with a hidden fault you fix through real commands. |
 | 🏆 **Auto-issued certificates** | Pass every module ≥ 80% and resolve 3 tickets ≥ 70 in the track's categories → a printable certificate lands on your profile. |
-| 🎨 **5 switchable themes** | Computer Lab (light), Blueprint, Chalkboard, Night Console, Amber CRT — applied instantly, saved per browser. |
+| 🎨 **5 switchable themes** | Midnight (dark, default), Daylight (light), Blueprint, Chalkboard, Amber CRT — applied instantly, saved per browser. |
+| ✉️ **Contact page** | A `/contact` form that emails the message + an auto-reply via nodemailer, degrading gracefully when unconfigured. |
 
 ---
 
@@ -129,7 +130,7 @@ Five full themes, switchable from **Settings → Appearance** and saved to your 
 - **3D:** Three.js · @react-three/fiber 8 · @react-three/drei 9
 - **Auth & data:** email/password (bcryptjs) + JWT session cookie · libSQL (`@libsql/client`) — local SQLite file in dev, Turso in production
 - **AI:** OpenRouter-compatible endpoint (free models) with model fallback + retry, or local **Ollama**
-- **Styling:** Tailwind CSS + CSS-variable design tokens (5 themes) · Plus Jakarta Sans + JetBrains Mono
+- **Styling:** Tailwind CSS + CSS-variable design tokens (5 themes, indigo-on-navy default) · Inter + JetBrains Mono
 - **Testing:** Jest + ts-jest (pure logic modules are unit-tested; R3F is never imported in tests)
 
 ---
