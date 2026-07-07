@@ -339,3 +339,13 @@ body { font-family: var(--font-body), system-ui, sans-serif; }
   .ticket-card, .ticket-card:hover { transition: none; }
   .field-input, .btn-primary, .btn-ghost, .tool-btn { transition: none; }
 }
+
+@media print {
+  .print-hide {
+    display: none !important;
+  }
+  .cert-card {
+    break-inside: avoid;
+    border-color: #334155 !important;
+  }
+}
