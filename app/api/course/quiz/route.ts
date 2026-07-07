@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "moduleIndex and numeric answers[] required" }, { status: 400 });
   }
 
-  const row = getCourseRow(session.userId, track);
+  const row = await getCourseRow(session.userId, track);
   if (!row) {
     return NextResponse.json({ error: "Course not generated yet" }, { status: 404 });
   }
@@ -35,8 +35,8 @@ export async function POST(request: Request) {
   const result = gradeQuiz(module, answers);
   let certIssued = false;
   if (result.passed) {
-    recordModulePass(row.id, moduleIndex, result.score);
-    certIssued = checkAndIssueCertificate(session.userId, track);
+    await recordModulePass(row.id, moduleIndex, result.score);
+    certIssued = await checkAndIssueCertificate(session.userId, track);
   }
 
   return NextResponse.json({ ...result, certIssued }, { status: 200 });

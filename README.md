@@ -127,7 +127,7 @@ Five full themes, switchable from **Settings → Appearance** and saved to your 
 
 - **Framework:** Next.js 14 (App Router) · TypeScript · React 18
 - **3D:** Three.js · @react-three/fiber 8 · @react-three/drei 9
-- **Auth & data:** email/password (bcryptjs) + JWT session cookie · better-sqlite3
+- **Auth & data:** email/password (bcryptjs) + JWT session cookie · libSQL (`@libsql/client`) — local SQLite file in dev, Turso in production
 - **AI:** OpenRouter-compatible endpoint (free models) with model fallback + retry, or local **Ollama**
 - **Styling:** Tailwind CSS + CSS-variable design tokens (5 themes) · Plus Jakarta Sans + JetBrains Mono
 - **Testing:** Jest + ts-jest (pure logic modules are unit-tested; R3F is never imported in tests)
@@ -187,11 +187,23 @@ See [CLAUDE.md](CLAUDE.md) for the full architecture notes.
 
 ## Deploying to Vercel
 
-The app is a standard Next.js project and builds on Vercel out of the box. **One caveat:** it
-currently persists auth, courses, and certificates in a **file-based SQLite database**
-(`better-sqlite3`), which does **not** survive Vercel's ephemeral serverless filesystem. To run it
-on Vercel, swap the storage layer for a hosted database — **Turso / libSQL** (closest to SQLite) or
-Neon Postgres — then import the repo and set the environment variables above.
+The app runs on Vercel out of the box. Data lives in **libSQL** via `@libsql/client`, which uses a
+local SQLite file in development and **[Turso](https://turso.tech)** (or any libSQL server) in
+production — no ephemeral-filesystem problems.
+
+1. Create a Turso database and grab its URL + auth token (`turso db create techbench && turso db show --url techbench && turso db tokens create techbench`).
+2. Import the repo at [vercel.com/new](https://vercel.com/new).
+3. Set the environment variables above **plus**:
+
+   ```bash
+   TURSO_DATABASE_URL=libsql://your-db.turso.io
+   TURSO_AUTH_TOKEN=your-turso-token
+   NEXT_PUBLIC_SITE_URL=https://your-domain.vercel.app   # for canonical URLs & OG tags
+   ```
+
+4. Deploy. The schema is created automatically on first request.
+
+Locally, no Turso is needed — the app defaults to `file:./data/app.db`.
 
 ---
 

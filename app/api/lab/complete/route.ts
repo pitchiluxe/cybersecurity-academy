@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "kind and score (0-100) required" }, { status: 400 });
   }
 
-  recordTicketResult(session.userId, category, Math.round(score));
-  const newCertificates = checkCertsForCategory(session.userId, category);
+  await recordTicketResult(session.userId, category, Math.round(score));
+  const newCertificates = await checkCertsForCategory(session.userId, category);
   return NextResponse.json({ recorded: true, newCertificates }, { status: 200 });
 }

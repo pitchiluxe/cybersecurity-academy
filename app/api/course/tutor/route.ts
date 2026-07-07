@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "moduleIndex and messages[] required" }, { status: 400 });
   }
 
-  const row = getCourseRow(session.userId, track);
+  const row = await getCourseRow(session.userId, track);
   if (!row) {
     return NextResponse.json({ error: "Course not generated yet" }, { status: 404 });
   }

@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   if (typeof track !== "string" || !isTrackId(track)) {
     return NextResponse.json({ error: "Unknown track" }, { status: 400 });
   }
-  const row = getCourseRow(session.userId, track);
+  const row = await getCourseRow(session.userId, track);
   if (!row) {
     return NextResponse.json({ error: "Take the course first — practice tickets are built from your modules." }, { status: 404 });
   }

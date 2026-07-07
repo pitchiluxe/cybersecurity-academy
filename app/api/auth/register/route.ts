@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  if (findUserByEmail(email)) {
+  if (await findUserByEmail(email)) {
     return NextResponse.json({ error: "That email's already registered." }, { status: 409 });
   }
 
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
 
   let user;
   try {
-    user = createUser(email, passwordHash);
+    user = await createUser(email, passwordHash);
   } catch {
     return NextResponse.json({ error: "That email's already registered." }, { status: 409 });
   }

@@ -22,7 +22,7 @@ The original prompt-spec documents ([agent.md](agent.md), [prompt.md](prompt.md)
 
 ## Architecture
 
-- **Auth**: email+password (bcryptjs) in SQLite via better-sqlite3 (`lib/db.ts`); JWT session cookie (`lib/session.ts`, cookie name `session`); `middleware.ts` gates `/`, `/play/*`, `/settings`, `/courses/*`, and `/profile` (redirects to `/login`). API routes under `app/api/auth/*`.
+- **Auth**: email+password (bcryptjs) in libSQL via `@libsql/client` (`lib/db.ts` — all query fns are **async**; local `file:./data/app.db` in dev, Turso in prod via `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN`); JWT session cookie (`lib/session.ts`, cookie name `session`); `middleware.ts` gates `/`, `/play/*`, `/settings`, `/courses/*`, and `/profile` (redirects to `/login`). API routes under `app/api/auth/*`.
   - **Important**: after any auth state change (login/register/logout), client code must use `window.location.assign(...)`, NOT `router.push` — the Next 14 client Router Cache caches middleware redirects, so soft navigation bounces users back to `/login` even with a valid cookie.
 - **Scenario engine**: `lib/scenarios.ts` builds all LLM prompts (queue generation, end-user roleplay replies, grading). The end-user reply prompt treats tech messages starting with `/run ` as remote diagnostic commands and answers with raw terminal-style output. Rubric includes resolution-notes documentation.
 - **API routes** `app/api/scenario/{queue,start,reply,grade}` are thin wrappers: build messages → `callOpenRouter` → parse (`lib/parsing.ts`).

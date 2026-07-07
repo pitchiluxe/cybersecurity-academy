@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: INVALID_CREDENTIALS_MESSAGE }, { status: 401 });
   }
 
-  const user = findUserByEmail(email);
+  const user = await findUserByEmail(email);
   const valid = await verifyPassword(password, user?.password_hash ?? DUMMY_PASSWORD_HASH);
   if (!user || !valid) {
     return NextResponse.json({ error: INVALID_CREDENTIALS_MESSAGE }, { status: 401 });

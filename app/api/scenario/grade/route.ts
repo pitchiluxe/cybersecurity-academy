@@ -29,8 +29,8 @@ export async function POST(request: Request) {
       const session = token ? await verifySessionToken(token) : null;
       let newCertificates: string[] = [];
       if (session) {
-        recordTicketResult(session.userId, seed.category, result.score);
-        newCertificates = checkCertsForCategory(session.userId, seed.category);
+        await recordTicketResult(session.userId, seed.category, result.score);
+        newCertificates = await checkCertsForCategory(session.userId, seed.category);
       }
       return NextResponse.json({ result, rootCause: seed.rootCause, newCertificates }, { status: 200 });
     } catch (err) {

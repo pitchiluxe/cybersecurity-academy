@@ -18,14 +18,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unknown track" }, { status: 400 });
   }
 
-  const cached = getCourseRow(session.userId, track);
+  const cached = await getCourseRow(session.userId, track);
   if (cached) {
     const course = JSON.parse(cached.content_json) as Course;
     return NextResponse.json(
       {
         course: stripAnswers(course),
-        passedModules: getPassedModuleIndexes(cached.id),
-        certified: hasCertificate(session.userId, track),
+        passedModules: await getPassedModuleIndexes(cached.id),
+        certified: await hasCertificate(session.userId, track),
       },
       { status: 200 }
     );
@@ -39,10 +39,10 @@ export async function POST(request: Request) {
       const course = parseCourse(text, track);
       // Re-read after save: a concurrent generation may have won the
       // UNIQUE(user_id, track) race, and both callers must see one course.
-      const courseId = saveCourse(session.userId, track, JSON.stringify(course));
-      const stored = JSON.parse(getCourseRow(session.userId, track)!.content_json) as Course;
+      const courseId = await saveCourse(session.userId, track, JSON.stringify(course));
+      const stored = JSON.parse((await getCourseRow(session.userId, track))!.content_json) as Course;
       return NextResponse.json(
-        { course: stripAnswers(stored), passedModules: getPassedModuleIndexes(courseId), certified: false },
+        { course: stripAnswers(stored), passedModules: await getPassedModuleIndexes(courseId), certified: false },
         { status: 200 }
       );
     } catch (err) {

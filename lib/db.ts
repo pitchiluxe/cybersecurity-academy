@@ -1,65 +1,87 @@
-import Database from "better-sqlite3";
-import path from "path";
-import fs from "fs";
+import { createClient, type Client, type Row } from "@libsql/client";
 
-const DB_PATH = path.join(process.cwd(), "data", "app.db");
+// libSQL client — talks to a local SQLite file in development and to Turso
+// (or any libSQL server) in production. Set TURSO_DATABASE_URL + TURSO_AUTH_TOKEN
+// on Vercel; locally it defaults to a file under ./data so nothing else changes.
+const DB_URL = process.env.TURSO_DATABASE_URL ?? "file:./data/app.db";
+const DB_AUTH_TOKEN = process.env.TURSO_AUTH_TOKEN;
 
-let db: Database.Database | null = null;
+let client: Client | null = null;
+let schemaReady: Promise<void> | null = null;
 
-function ensureDataDir(): void {
-  const dir = path.dirname(DB_PATH);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+const SCHEMA = `
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE TABLE IF NOT EXISTS presence (
+    user_id INTEGER PRIMARY KEY,
+    last_seen INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS courses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    track TEXT NOT NULL,
+    content_json TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (user_id, track)
+  );
+  CREATE TABLE IF NOT EXISTS module_progress (
+    course_id INTEGER NOT NULL,
+    module_index INTEGER NOT NULL,
+    quiz_score INTEGER NOT NULL,
+    passed_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (course_id, module_index)
+  );
+  CREATE TABLE IF NOT EXISTS certificates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    track TEXT NOT NULL,
+    cert_code TEXT NOT NULL,
+    issued_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (user_id, track)
+  );
+  CREATE TABLE IF NOT EXISTS ticket_results (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    category TEXT NOT NULL,
+    grade INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+`;
+
+function getClient(): Client {
+  if (!client) {
+    client = createClient({ url: DB_URL, authToken: DB_AUTH_TOKEN, intMode: "number" });
   }
+  return client;
 }
 
-export function getDb(): Database.Database {
-  if (db) return db;
-  ensureDataDir();
-  db = new Database(DB_PATH);
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      email TEXT NOT NULL UNIQUE,
-      password_hash TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-    CREATE TABLE IF NOT EXISTS presence (
-      user_id INTEGER PRIMARY KEY,
-      last_seen INTEGER NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS courses (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      track TEXT NOT NULL,
-      content_json TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      UNIQUE (user_id, track)
-    );
-    CREATE TABLE IF NOT EXISTS module_progress (
-      course_id INTEGER NOT NULL,
-      module_index INTEGER NOT NULL,
-      quiz_score INTEGER NOT NULL,
-      passed_at TEXT NOT NULL DEFAULT (datetime('now')),
-      PRIMARY KEY (course_id, module_index)
-    );
-    CREATE TABLE IF NOT EXISTS certificates (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      track TEXT NOT NULL,
-      cert_code TEXT NOT NULL,
-      issued_at TEXT NOT NULL DEFAULT (datetime('now')),
-      UNIQUE (user_id, track)
-    );
-    CREATE TABLE IF NOT EXISTS ticket_results (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      category TEXT NOT NULL,
-      grade INTEGER NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-  `);
-  return db;
+// Create the schema exactly once per process (memoized promise).
+function ensureSchema(): Promise<void> {
+  if (!schemaReady) {
+    schemaReady = getClient()
+      .executeMultiple(SCHEMA)
+      .catch((err) => {
+        schemaReady = null; // allow a retry on transient failure
+        throw err;
+      });
+  }
+  return schemaReady;
+}
+
+type Args = (string | number | bigint | null)[];
+
+async function exec(sql: string, args: Args = []) {
+  await ensureSchema();
+  return getClient().execute({ sql, args });
+}
+
+// Coerce libSQL row values (which can be bigint) to safe JS numbers.
+function num(v: unknown): number {
+  return typeof v === "bigint" ? Number(v) : (v as number);
 }
 
 export interface UserRow {
@@ -69,28 +91,32 @@ export interface UserRow {
   created_at: string;
 }
 
-export function findUserByEmail(email: string): UserRow | undefined {
-  return getDb().prepare("SELECT * FROM users WHERE email = ?").get(email) as UserRow | undefined;
+function mapUser(r: Row): UserRow {
+  return { id: num(r.id), email: String(r.email), password_hash: String(r.password_hash), created_at: String(r.created_at) };
 }
 
-export function createUser(email: string, passwordHash: string): UserRow {
-  const info = getDb()
-    .prepare("INSERT INTO users (email, password_hash) VALUES (?, ?)")
-    .run(email, passwordHash);
-  return getDb().prepare("SELECT * FROM users WHERE id = ?").get(info.lastInsertRowid) as UserRow;
+export async function findUserByEmail(email: string): Promise<UserRow | undefined> {
+  const rs = await exec("SELECT * FROM users WHERE email = ?", [email]);
+  return rs.rows[0] ? mapUser(rs.rows[0]) : undefined;
 }
 
-export function upsertPresence(userId: number, nowMs: number): void {
-  getDb()
-    .prepare(
-      "INSERT INTO presence (user_id, last_seen) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET last_seen = excluded.last_seen"
-    )
-    .run(userId, nowMs);
+export async function createUser(email: string, passwordHash: string): Promise<UserRow> {
+  const info = await exec("INSERT INTO users (email, password_hash) VALUES (?, ?)", [email, passwordHash]);
+  const id = Number(info.lastInsertRowid);
+  const rs = await exec("SELECT * FROM users WHERE id = ?", [id]);
+  return mapUser(rs.rows[0]);
 }
 
-export function getPresenceTimestamps(): number[] {
-  const rows = getDb().prepare("SELECT last_seen FROM presence").all() as { last_seen: number }[];
-  return rows.map((r) => r.last_seen);
+export async function upsertPresence(userId: number, nowMs: number): Promise<void> {
+  await exec(
+    "INSERT INTO presence (user_id, last_seen) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET last_seen = excluded.last_seen",
+    [userId, nowMs]
+  );
+}
+
+export async function getPresenceTimestamps(): Promise<number[]> {
+  const rs = await exec("SELECT last_seen FROM presence");
+  return rs.rows.map((r) => num(r.last_seen));
 }
 
 export interface CertificateRow {
@@ -101,80 +127,77 @@ export interface CertificateRow {
   issued_at: string;
 }
 
-export function getCourseRow(userId: number, track: string): { id: number; content_json: string } | undefined {
-  return getDb()
-    .prepare("SELECT id, content_json FROM courses WHERE user_id = ? AND track = ?")
-    .get(userId, track) as { id: number; content_json: string } | undefined;
+function mapCert(r: Row): CertificateRow {
+  return { id: num(r.id), user_id: num(r.user_id), track: String(r.track), cert_code: String(r.cert_code), issued_at: String(r.issued_at) };
+}
+
+export async function getCourseRow(userId: number, track: string): Promise<{ id: number; content_json: string } | undefined> {
+  const rs = await exec("SELECT id, content_json FROM courses WHERE user_id = ? AND track = ?", [userId, track]);
+  const r = rs.rows[0];
+  return r ? { id: num(r.id), content_json: String(r.content_json) } : undefined;
 }
 
 // Concurrent generations of the same course (e.g. React StrictMode double
 // effects) race on the UNIQUE(user_id, track) constraint; first write wins.
-export function saveCourse(userId: number, track: string, contentJson: string): number {
-  getDb()
-    .prepare("INSERT INTO courses (user_id, track, content_json) VALUES (?, ?, ?) ON CONFLICT(user_id, track) DO NOTHING")
-    .run(userId, track, contentJson);
-  return getCourseRow(userId, track)!.id;
+export async function saveCourse(userId: number, track: string, contentJson: string): Promise<number> {
+  await exec("INSERT INTO courses (user_id, track, content_json) VALUES (?, ?, ?) ON CONFLICT(user_id, track) DO NOTHING", [
+    userId,
+    track,
+    contentJson,
+  ]);
+  const row = await getCourseRow(userId, track);
+  return row!.id;
 }
 
-export function getPassedModuleIndexes(courseId: number): number[] {
-  const rows = getDb()
-    .prepare("SELECT module_index FROM module_progress WHERE course_id = ? ORDER BY module_index")
-    .all(courseId) as { module_index: number }[];
-  return rows.map((r) => r.module_index);
+export async function getPassedModuleIndexes(courseId: number): Promise<number[]> {
+  const rs = await exec("SELECT module_index FROM module_progress WHERE course_id = ? ORDER BY module_index", [courseId]);
+  return rs.rows.map((r) => num(r.module_index));
 }
 
-export function recordModulePass(courseId: number, moduleIndex: number, score: number): void {
-  getDb()
-    .prepare(
-      "INSERT INTO module_progress (course_id, module_index, quiz_score) VALUES (?, ?, ?) ON CONFLICT(course_id, module_index) DO UPDATE SET quiz_score = MAX(quiz_score, excluded.quiz_score)"
-    )
-    .run(courseId, moduleIndex, score);
-}
-
-export function getCertificates(userId: number): CertificateRow[] {
-  return getDb()
-    .prepare("SELECT * FROM certificates WHERE user_id = ? ORDER BY issued_at")
-    .all(userId) as CertificateRow[];
-}
-
-export function hasCertificate(userId: number, track: string): boolean {
-  return (
-    getDb().prepare("SELECT 1 FROM certificates WHERE user_id = ? AND track = ?").get(userId, track) !== undefined
+export async function recordModulePass(courseId: number, moduleIndex: number, score: number): Promise<void> {
+  await exec(
+    "INSERT INTO module_progress (course_id, module_index, quiz_score) VALUES (?, ?, ?) ON CONFLICT(course_id, module_index) DO UPDATE SET quiz_score = MAX(quiz_score, excluded.quiz_score)",
+    [courseId, moduleIndex, score]
   );
 }
 
-export function insertCertificate(userId: number, track: string, certCode: string): void {
-  getDb()
-    .prepare("INSERT OR IGNORE INTO certificates (user_id, track, cert_code) VALUES (?, ?, ?)")
-    .run(userId, track, certCode);
+export async function getCertificates(userId: number): Promise<CertificateRow[]> {
+  const rs = await exec("SELECT * FROM certificates WHERE user_id = ? ORDER BY issued_at", [userId]);
+  return rs.rows.map(mapCert);
 }
 
-export function recordTicketResult(userId: number, category: string, grade: number): void {
-  getDb()
-    .prepare("INSERT INTO ticket_results (user_id, category, grade) VALUES (?, ?, ?)")
-    .run(userId, category, grade);
+export async function hasCertificate(userId: number, track: string): Promise<boolean> {
+  const rs = await exec("SELECT 1 FROM certificates WHERE user_id = ? AND track = ?", [userId, track]);
+  return rs.rows.length > 0;
 }
 
-export function countQualifyingTickets(userId: number, categories: string[], minGrade: number): number {
+export async function insertCertificate(userId: number, track: string, certCode: string): Promise<void> {
+  await exec("INSERT OR IGNORE INTO certificates (user_id, track, cert_code) VALUES (?, ?, ?)", [userId, track, certCode]);
+}
+
+export async function recordTicketResult(userId: number, category: string, grade: number): Promise<void> {
+  await exec("INSERT INTO ticket_results (user_id, category, grade) VALUES (?, ?, ?)", [userId, category, grade]);
+}
+
+export async function countQualifyingTickets(userId: number, categories: string[], minGrade: number): Promise<number> {
   if (categories.length === 0) return 0;
   const placeholders = categories.map(() => "?").join(",");
-  const row = getDb()
-    .prepare(
-      `SELECT COUNT(*) AS n FROM ticket_results WHERE user_id = ? AND grade >= ? AND category IN (${placeholders})`
-    )
-    .get(userId, minGrade, ...categories) as { n: number };
-  return row.n;
+  const rs = await exec(
+    `SELECT COUNT(*) AS n FROM ticket_results WHERE user_id = ? AND grade >= ? AND category IN (${placeholders})`,
+    [userId, minGrade, ...categories]
+  );
+  return num(rs.rows[0].n);
 }
 
-export function getTicketStats(userId: number): { total: number; resolvedOver70: number; avgGrade: number | null } {
-  const row = getDb()
-    .prepare(
-      "SELECT COUNT(*) AS total, SUM(CASE WHEN grade >= 70 THEN 1 ELSE 0 END) AS resolved, AVG(grade) AS avg FROM ticket_results WHERE user_id = ?"
-    )
-    .get(userId) as { total: number; resolved: number | null; avg: number | null };
+export async function getTicketStats(userId: number): Promise<{ total: number; resolvedOver70: number; avgGrade: number | null }> {
+  const rs = await exec(
+    "SELECT COUNT(*) AS total, SUM(CASE WHEN grade >= 70 THEN 1 ELSE 0 END) AS resolved, AVG(grade) AS avg FROM ticket_results WHERE user_id = ?",
+    [userId]
+  );
+  const r = rs.rows[0];
   return {
-    total: row.total,
-    resolvedOver70: row.resolved ?? 0,
-    avgGrade: row.avg === null ? null : Math.round(row.avg),
+    total: num(r.total),
+    resolvedOver70: r.resolved === null ? 0 : num(r.resolved),
+    avgGrade: r.avg === null ? null : Math.round(num(r.avg)),
   };
 }

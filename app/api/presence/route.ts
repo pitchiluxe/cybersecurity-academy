@@ -11,6 +11,6 @@ export async function POST(request: Request) {
   }
 
   const now = Date.now();
-  upsertPresence(session.userId, now);
-  return NextResponse.json({ online: countOnline(getPresenceTimestamps(), now) }, { status: 200 });
+  await upsertPresence(session.userId, now);
+  return NextResponse.json({ online: countOnline(await getPresenceTimestamps(), now) }, { status: 200 });
 }
