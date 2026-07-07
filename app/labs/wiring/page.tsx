@@ -120,7 +120,7 @@ export default function WiringLabPage() {
             </div>
           )}
           <p className="mt-4 text-[12px]" style={{ color: "var(--ink-faint)" }}>
-            Click a port, then click the port it connects to. Left-drag to orbit · right-drag to pan · scroll to zoom · click the axis cube (bottom-right) to snap to a view.
+            Click a port, then click the port it connects to. Arrow keys move around · left-drag to orbit · right-drag to pan · scroll to zoom · click the axis cube (bottom-right) to snap to a view.
           </p>
         </aside>
       </div>

@@ -164,7 +164,7 @@ export default function FortigateLabPage() {
             )}
             {!wired && (
               <p className="mt-2 text-[11px]" style={{ color: "var(--ink-faint)" }}>
-                Click a port then its match. Left-drag to orbit · right-drag to pan · scroll to zoom · axis cube snaps views.
+                Click a port then its match. Arrow keys move around · left-drag to orbit · right-drag to pan · scroll to zoom · axis cube snaps views.
               </p>
             )}
           </div>

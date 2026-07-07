@@ -95,6 +95,26 @@ function CameraRig({
   return null;
 }
 
+// Arrow-key panning. Bound to the canvas (not window) so typing in the
+// FortiGate console never moves the camera; auto-focused so arrows work at once.
+function KeyControls({ controls }: { controls: React.MutableRefObject<OrbitControlsImpl | null> }) {
+  const { gl } = useThree();
+  useEffect(() => {
+    const el = gl.domElement;
+    el.tabIndex = 0;
+    el.style.outline = "none";
+    const c = controls.current;
+    if (c) {
+      c.keyPanSpeed = 28;
+      c.keys = { LEFT: "ArrowLeft", UP: "ArrowUp", RIGHT: "ArrowRight", BOTTOM: "ArrowDown" };
+      c.listenToKeyEvents(el);
+    }
+    el.focus();
+    return () => { c?.stopListenToKeyEvents?.(); };
+  }, [gl, controls]);
+  return null;
+}
+
 function Cable({ from, to, cable, animate }: { from: THREE.Vector3; to: THREE.Vector3; cable: string; animate: boolean }) {
   const curve = useMemo(() => {
     const mid = from.clone().lerp(to, 0.5);
@@ -436,6 +456,7 @@ export default function WiringScene({
   return (
     <Canvas shadows camera={{ position: [0, 6, 10], fov: 42 }} style={{ background: "#0b1220" }}>
       <CameraRig center={center} radius={radius} controls={controls} />
+      <KeyControls controls={controls} />
       <hemisphereLight args={["#dbeafe", "#0b1220", 0.6]} />
       <ambientLight intensity={0.35} />
       <directionalLight
