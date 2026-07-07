@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import type { TicketPreview } from "@/lib/types";
 
 
 interface ClientQuizQuestion {
@@ -49,6 +50,10 @@ export default function CourseTrackPage() {
   const [tutorBusy, setTutorBusy] = useState(false);
   const [tutorOpen, setTutorOpen] = useState(false);
   const tutorEndRef = useRef<HTMLDivElement>(null);
+
+  const [practice, setPractice] = useState<TicketPreview[] | null>(null);
+  const [practiceBusy, setPracticeBusy] = useState(false);
+  const [practiceError, setPracticeError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -132,6 +137,25 @@ export default function CourseTrackPage() {
             },
           ]
     );
+  }
+
+  async function generatePractice() {
+    if (practiceBusy) return;
+    setPracticeBusy(true);
+    setPracticeError(null);
+    const res = await fetch("/api/course/tickets", { method: "POST", body: JSON.stringify({ track }) });
+    const body = await res.json().catch(() => ({}));
+    setPracticeBusy(false);
+    if (!res.ok) {
+      setPracticeError(body.error ?? "Could not generate practice tickets.");
+      return;
+    }
+    setPractice(body.tickets);
+  }
+
+  function openPractice(t: TicketPreview) {
+    sessionStorage.setItem(`ticket:${t.ticketId}`, JSON.stringify(t));
+    window.location.assign(`/play/${t.category}?ticket=${t.ticketId}`);
   }
 
   if (loadError && !course) {
@@ -278,6 +302,41 @@ export default function CourseTrackPage() {
               className="btn-primary mt-4"
             >
               {submitting ? "Grading…" : "Submit quiz"}
+            </button>
+
+            <hr className="my-6" style={{ borderColor: "var(--border)" }} />
+            <h3 className="font-display text-base font-bold" style={{ color: "var(--ink)" }}>
+              Practice tickets
+            </h3>
+            <p className="mt-1 text-sm" style={{ color: "var(--ink-muted)" }}>
+              {track === "vmware"
+                ? "Your virtual lab: each ticket provisions a simulated ESXi host — connect to the machine from the ticket to troubleshoot hands-on."
+                : "Real tickets built from this course's modules — resolving them counts toward your certificate lab requirement."}
+            </p>
+            {practiceError && (
+              <p role="alert" className="mt-2 text-sm" style={{ color: "var(--warn)" }}>{practiceError}</p>
+            )}
+            <div className="mt-3 flex flex-col gap-2">
+              {practice?.map((t) => (
+                <button
+                  key={t.ticketId}
+                  onClick={() => openPractice(t)}
+                  className="panel cursor-pointer px-4 py-3 text-left"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-mono text-[11px]" style={{ color: "var(--ink-faint)" }}>
+                      {t.ticketId} · {t.category} · {t.priority}
+                    </span>
+                    <span className="font-mono text-[11px] uppercase" style={{ color: "var(--accent)" }}>Open →</span>
+                  </div>
+                  <div className="mt-1 text-sm" style={{ color: "var(--ink-muted)" }}>
+                    {t.persona.name} ({t.persona.department}): {t.openingMessage.slice(0, 120)}…
+                  </div>
+                </button>
+              ))}
+            </div>
+            <button onClick={generatePractice} disabled={practiceBusy} className="btn-ghost mt-3">
+              {practiceBusy ? "Generating…" : practice ? "Regenerate practice tickets" : "Generate practice tickets"}
             </button>
           </article>
 

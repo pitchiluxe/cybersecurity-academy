@@ -9,6 +9,7 @@ import {
   QUIZ_PASS_PERCENT,
   buildCourseMessages,
   buildTutorMessages,
+  buildPracticeTicketMessages,
   parseCourse,
   stripAnswers,
   type Course,
@@ -184,6 +185,17 @@ describe("buildTutorMessages", () => {
     expect(msgs[0].content).toContain("CompTIA Network+");
     expect(msgs).toHaveLength(4);
     expect(msgs[3]).toEqual({ role: "user", content: "Why does nslookup time out?" });
+  });
+});
+
+describe("buildPracticeTicketMessages", () => {
+  it("constrains categories to the track and cites module titles", () => {
+    const track = getTrack("securityplus");
+    const msgs = buildPracticeTicketMessages(track, ["Phishing Response", "Malware Triage"]);
+    expect(msgs[0].role).toBe("system");
+    expect(msgs[0].content).toContain("Phishing Response");
+    for (const c of track.categories) expect(msgs[0].content).toContain(`"${c}"`);
+    expect(msgs[0].content).not.toContain('"hardware"');
   });
 });
 

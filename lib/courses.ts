@@ -103,6 +103,26 @@ export function tracksForCategory(category: ScenarioCategory): TrackId[] {
   return TRACKS.filter((t) => t.categories.includes(category)).map((t) => t.id);
 }
 
+export function buildPracticeTicketMessages(track: TrackMeta, moduleTitles: string[]): ChatMessage[] {
+  const categoryList = track.categories.map((c) => `"${c}"`).join(", ");
+  const system = `You are generating 3 practice tickets for an IT helpdesk trainee studying for the ${track.title} certification.
+The trainee just studied these course modules: ${moduleTitles.join("; ")}.
+Each ticket must exercise skills from those modules, with a plausible, specific, non-generic end-user persona and a concrete root cause diagnosable from symptoms alone.
+Every ticket's "category" MUST be one of: ${categoryList} — no other values.
+Respond with ONLY a JSON array of 3 objects, no prose, no markdown fences, each matching exactly this shape:
+{
+  "category": "one of the allowed category ids, exactly as written",
+  "persona": { "name": "string", "department": "string" },
+  "environment": { "os": "string", "device": "string", "detail": "string" },
+  "rootCause": "string, the underlying technical cause — the trainee must never see this directly",
+  "openingMessage": "string, the end-user's first message describing the problem in their own words, 2-4 sentences, no jargon"
+}`;
+  return [
+    { role: "system", content: system },
+    { role: "user", content: "Generate the practice tickets now." },
+  ];
+}
+
 export function gradeQuiz(
   module: CourseModule,
   answers: number[]
