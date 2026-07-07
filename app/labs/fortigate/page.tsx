@@ -162,6 +162,11 @@ export default function FortigateLabPage() {
                 Branch online — lab complete, score {score}.{recorded && " Counted toward your cert labs."}
               </div>
             )}
+            {!wired && (
+              <p className="mt-2 text-[11px]" style={{ color: "var(--ink-faint)" }}>
+                Click a port then its match. Left-drag to orbit · right-drag to pan · scroll to zoom · axis cube snaps views.
+              </p>
+            )}
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col rounded-xl border" style={{ borderColor: "#1e293b", background: "#020617" }}>
