@@ -7,6 +7,10 @@ import {
   certEligible,
   makeCertCode,
   QUIZ_PASS_PERCENT,
+  buildCourseMessages,
+  parseCourse,
+  stripAnswers,
+  type Course,
   type CourseModule,
 } from "./courses";
 
@@ -85,4 +89,85 @@ describe("makeCertCode", () => {
 
 describe("constants", () => {
   it("pass threshold is 80", () => expect(QUIZ_PASS_PERCENT).toBe(80));
+});
+
+describe("buildCourseMessages", () => {
+  it("is a system+user pair mentioning the track and JSON shape", () => {
+    const msgs = buildCourseMessages("networkplus");
+    expect(msgs).toHaveLength(2);
+    expect(msgs[0].role).toBe("system");
+    expect(msgs[0].content).toContain("CompTIA Network+");
+    expect(msgs[0].content).toContain("answerIndex");
+  });
+});
+
+describe("parseCourse", () => {
+  const good = JSON.stringify({
+    title: "Network+ Crash Course",
+    modules: [
+      {
+        title: "OSI Model",
+        lesson: "Layers explained...",
+        quiz: [
+          { question: "Layer 3?", choices: ["Network", "Data link", "Session", "Physical"], answerIndex: 0 },
+          { question: "q", choices: ["a", "b", "c", "d"], answerIndex: 1 },
+          { question: "q", choices: ["a", "b", "c", "d"], answerIndex: 2 },
+        ],
+      },
+      {
+        title: "Subnetting",
+        lesson: "CIDR...",
+        quiz: [
+          { question: "q", choices: ["a", "b", "c", "d"], answerIndex: 3 },
+          { question: "q", choices: ["a", "b", "c", "d"], answerIndex: 0 },
+          { question: "q", choices: ["a", "b", "c", "d"], answerIndex: 1 },
+        ],
+      },
+      {
+        title: "DNS",
+        lesson: "Resolution...",
+        quiz: [
+          { question: "q", choices: ["a", "b", "c", "d"], answerIndex: 2 },
+          { question: "q", choices: ["a", "b", "c", "d"], answerIndex: 3 },
+          { question: "q", choices: ["a", "b", "c", "d"], answerIndex: 0 },
+        ],
+      },
+    ],
+  });
+
+  it("parses a valid course", () => {
+    const course = parseCourse(good, "networkplus");
+    expect(course.track).toBe("networkplus");
+    expect(course.modules).toHaveLength(3);
+    expect(course.modules[0].quiz[0].answerIndex).toBe(0);
+  });
+
+  it("rejects a course with too few modules", () => {
+    const bad = JSON.stringify({ title: "T", modules: [] });
+    expect(() => parseCourse(bad, "aplus")).toThrow(/modules/);
+  });
+
+  it("rejects out-of-range answerIndex", () => {
+    const bad = good.replace('"answerIndex":0', '"answerIndex":7');
+    expect(() => parseCourse(bad, "networkplus")).toThrow(/answerIndex/);
+  });
+});
+
+describe("stripAnswers", () => {
+  it("removes answerIndex from every question", () => {
+    const course: Course = {
+      track: "aplus",
+      title: "T",
+      modules: [
+        {
+          title: "M",
+          lesson: "L",
+          quiz: [{ question: "q", choices: ["a", "b"], answerIndex: 1 }],
+        },
+      ],
+    };
+    const stripped = stripAnswers(course);
+    expect((stripped.modules[0].quiz[0] as Record<string, unknown>).answerIndex).toBeUndefined();
+    expect(stripped.modules[0].quiz[0].choices).toEqual(["a", "b"]);
+  });
 });

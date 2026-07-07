@@ -1,5 +1,7 @@
 import { randomBytes } from "crypto";
 import type { ScenarioCategory } from "./types";
+import type { ChatMessage } from "./openrouter";
+import { extractJsonFromText, ParseError } from "./parsing";
 
 export type TrackId = "aplus" | "networkplus" | "securityplus" | "ccna";
 
@@ -91,4 +93,108 @@ export function certEligible(modulesPassed: number, totalModules: number, qualif
 
 export function makeCertCode(track: TrackId): string {
   return `HDC-${getTrack(track).short}-${randomBytes(3).toString("hex").toUpperCase()}`;
+}
+
+export function buildCourseMessages(track: TrackId): ChatMessage[] {
+  const meta = getTrack(track);
+  const system = `You are an expert IT instructor writing a self-paced mini-course preparing a helpdesk trainee for the ${meta.title} certification.
+Focus: ${meta.description}
+Write 4 to 6 modules. Each module has a substantial lesson (400-700 words of plain text — paragraphs separated by blank lines, simple "- " bullet lists allowed, no markdown headings or code fences) grounded in real-world troubleshooting the trainee will face on the job, followed by a 5-question multiple-choice quiz.
+Respond with ONLY a JSON object, no prose, no markdown fences, matching exactly this shape:
+{
+  "title": "string, course title",
+  "modules": [
+    {
+      "title": "string",
+      "lesson": "string, the full lesson text",
+      "quiz": [
+        { "question": "string", "choices": ["string", "string", "string", "string"], "answerIndex": 0-3 }
+      ]
+    }
+  ]
+}`;
+  return [
+    { role: "system", content: system },
+    { role: "user", content: "Generate the course now." },
+  ];
+}
+
+function requireStr(value: unknown, field: string): string {
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new ParseError(`Expected non-empty string for "${field}"`);
+  }
+  return value;
+}
+
+export function parseCourse(text: string, track: TrackId): Course {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(extractJsonFromText(text));
+  } catch (err) {
+    if (err instanceof ParseError) throw err;
+    throw new ParseError(`Failed to JSON.parse course: ${(err as Error).message}`);
+  }
+  if (typeof raw !== "object" || raw === null) throw new ParseError("Course payload was not a JSON object");
+  const obj = raw as Record<string, unknown>;
+  const title = requireStr(obj.title, "title");
+  if (!Array.isArray(obj.modules) || obj.modules.length < 3 || obj.modules.length > 8) {
+    throw new ParseError(
+      `"modules" must be an array of 3-8 modules, got ${Array.isArray(obj.modules) ? obj.modules.length : typeof obj.modules}`
+    );
+  }
+
+  const modules: CourseModule[] = obj.modules.map((entry, mi) => {
+    if (typeof entry !== "object" || entry === null) throw new ParseError(`modules[${mi}] is not an object`);
+    const m = entry as Record<string, unknown>;
+    if (!Array.isArray(m.quiz) || m.quiz.length < 3) {
+      throw new ParseError(`modules[${mi}].quiz must be an array of at least 3 questions`);
+    }
+    const quiz: QuizQuestion[] = m.quiz.map((q, qi) => {
+      if (typeof q !== "object" || q === null) throw new ParseError(`modules[${mi}].quiz[${qi}] is not an object`);
+      const question = q as Record<string, unknown>;
+      const choices = question.choices;
+      if (!Array.isArray(choices) || choices.length < 2 || !choices.every((c) => typeof c === "string")) {
+        throw new ParseError(`modules[${mi}].quiz[${qi}].choices must be an array of strings`);
+      }
+      const answerIndex = question.answerIndex;
+      if (
+        typeof answerIndex !== "number" ||
+        !Number.isInteger(answerIndex) ||
+        answerIndex < 0 ||
+        answerIndex >= choices.length
+      ) {
+        throw new ParseError(`modules[${mi}].quiz[${qi}].answerIndex out of range`);
+      }
+      return {
+        question: requireStr(question.question, `modules[${mi}].quiz[${qi}].question`),
+        choices: choices as string[],
+        answerIndex,
+      };
+    });
+    return {
+      title: requireStr(m.title, `modules[${mi}].title`),
+      lesson: requireStr(m.lesson, `modules[${mi}].lesson`),
+      quiz,
+    };
+  });
+
+  return { track, title, modules };
+}
+
+export type ClientCourse = {
+  track: TrackId;
+  title: string;
+  modules: { title: string; lesson: string; quiz: { question: string; choices: string[] }[] }[];
+};
+
+export function stripAnswers(course: Course): ClientCourse {
+  return {
+    track: course.track,
+    title: course.title,
+    modules: course.modules.map((m) => ({
+      title: m.title,
+      lesson: m.lesson,
+      quiz: m.quiz.map((q) => ({ question: q.question, choices: q.choices })),
+    })),
+  };
 }
