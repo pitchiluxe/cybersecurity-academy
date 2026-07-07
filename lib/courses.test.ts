@@ -14,10 +14,27 @@ import {
   type Course,
   type CourseModule,
 } from "./courses";
+import { isScenarioCategory } from "./scenarios";
 
 describe("track catalog", () => {
-  it("has the four expected tracks", () => {
-    expect(TRACKS.map((t) => t.id)).toEqual(["aplus", "networkplus", "securityplus", "ccna"]);
+  it("has the 16-cert cybersecurity path in order", () => {
+    expect(TRACKS.map((t) => t.id)).toEqual([
+      "aplus", "networkplus", "linuxplus", "cloudplus",
+      "securityplus", "cysa", "pentestplus", "securityx",
+      "ccna", "ccnpsec", "ceh", "sscp", "cissp", "oscp",
+      "fortinet", "vmware",
+    ]);
+  });
+
+  it("has unique short codes and a tier on every track", () => {
+    expect(new Set(TRACKS.map((t) => t.short)).size).toBe(16);
+    for (const t of TRACKS) expect(["foundation", "security", "vendor"]).toContain(t.tier);
+  });
+
+  it("maps every track category to a real scenario category", () => {
+    for (const t of TRACKS) {
+      for (const c of t.categories) expect(isScenarioCategory(c)).toBe(true);
+    }
   });
 
   it("isTrackId accepts known ids and rejects junk", () => {

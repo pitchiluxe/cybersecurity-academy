@@ -2,17 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { ScenarioCategory } from "@/lib/types";
-import { SLA_TARGETS } from "@/lib/scenarios";
-
-const CATEGORY_LABELS: Record<ScenarioCategory, string> = {
-  network: "Network / Wi-Fi",
-  printer: "Printer",
-  password: "Password / MFA",
-  "app-crash": "Application Crash",
-  malware: "Malware / Quarantine",
-  hardware: "Hardware Failure",
-  vm: "Virtual Machine / VDI",
-};
+import { SLA_TARGETS, getCategoryMeta } from "@/lib/scenarios";
 
 const PRIORITY_PILL: Record<"P1" | "P2" | "P3", string> = {
   P1: "pill-danger",
@@ -50,7 +40,7 @@ export function TicketHeader({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="font-mono text-xs" style={{ color: "var(--accent)" }}>
-            {ticketId} · {CATEGORY_LABELS[category].toUpperCase()}
+            {ticketId} · {getCategoryMeta(category).label.toUpperCase()}
           </div>
           <h1 className="font-display mt-1 text-2xl font-bold" style={{ color: "var(--ink)" }}>
             Live support session

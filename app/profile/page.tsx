@@ -8,6 +8,7 @@ interface TrackProgress {
   id: string;
   title: string;
   description: string;
+  tier: string;
   started: boolean;
   modulesPassed: number;
   totalModules: number;

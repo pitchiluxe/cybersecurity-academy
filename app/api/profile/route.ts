@@ -31,6 +31,7 @@ export async function GET(request: Request) {
       id: t.id,
       title: t.title,
       description: t.description,
+      tier: t.tier,
       started: row !== undefined,
       modulesPassed,
       totalModules,

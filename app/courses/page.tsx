@@ -8,6 +8,7 @@ interface TrackProgress {
   id: string;
   title: string;
   description: string;
+  tier: string;
   started: boolean;
   modulesPassed: number;
   totalModules: number;
@@ -15,6 +16,12 @@ interface TrackProgress {
   requiredTickets: number;
   certificate: { certCode: string; issuedAt: string } | null;
 }
+
+const TIERS: { id: string; heading: string }[] = [
+  { id: "foundation", heading: "Foundation path" },
+  { id: "security", heading: "Security core" },
+  { id: "vendor", heading: "Vendor & specialist" },
+];
 
 export default function CoursesPage() {
   const [tracks, setTracks] = useState<TrackProgress[] | null>(null);
@@ -50,48 +57,59 @@ export default function CoursesPage() {
           </p>
         )}
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          {tracks?.map((t) => (
-            <Link
-              key={t.id}
-              href={`/courses/${t.id}`}
-              className="panel block p-5 transition-transform duration-150 hover:-translate-y-0.5"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <h2 className="font-display text-lg font-bold" style={{ color: "var(--ink)" }}>
-                  {t.title}
-                </h2>
-                {t.certificate ? (
-                  <span className="pill pill-accent">Certified</span>
-                ) : t.started ? (
-                  <span className="font-mono text-[10px] uppercase" style={{ color: "var(--accent)" }}>
-                    In progress
-                  </span>
-                ) : null}
+        {TIERS.map((tier) => {
+          const group = tracks?.filter((t) => t.tier === tier.id) ?? [];
+          if (group.length === 0) return null;
+          return (
+            <section key={tier.id} className="mt-8">
+              <h2 className="font-mono text-[11px] uppercase tracking-widest" style={{ color: "var(--ink-faint)" }}>
+                {tier.heading}
+              </h2>
+              <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                {group.map((t) => (
+                  <Link
+                    key={t.id}
+                    href={`/courses/${t.id}`}
+                    className="panel block p-5 transition-transform duration-150 hover:-translate-y-0.5"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <h2 className="font-display text-lg font-bold" style={{ color: "var(--ink)" }}>
+                        {t.title}
+                      </h2>
+                      {t.certificate ? (
+                        <span className="pill pill-accent">Certified</span>
+                      ) : t.started ? (
+                        <span className="font-mono text-[10px] uppercase" style={{ color: "var(--accent)" }}>
+                          In progress
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-2 text-sm" style={{ color: "var(--ink-muted)" }}>
+                      {t.description}
+                    </p>
+                    <div className="mt-4">
+                      <div className="h-1.5 w-full overflow-hidden rounded-full" style={{ background: "var(--surface-2)" }}>
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            background: "var(--accent)",
+                            width: t.totalModules > 0 ? `${(t.modulesPassed / t.totalModules) * 100}%` : "0%",
+                          }}
+                        />
+                      </div>
+                      <div className="mt-2 flex justify-between font-mono text-[11px]" style={{ color: "var(--ink-faint)" }}>
+                        <span>{t.started ? `${t.modulesPassed}/${t.totalModules} modules` : "Not started"}</span>
+                        <span>
+                          Lab: {Math.min(t.qualifyingTickets, t.requiredTickets)}/{t.requiredTickets} tickets
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
               </div>
-              <p className="mt-2 text-sm" style={{ color: "var(--ink-muted)" }}>
-                {t.description}
-              </p>
-              <div className="mt-4">
-                <div className="h-1.5 w-full overflow-hidden rounded-full" style={{ background: "var(--surface-2)" }}>
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      background: "var(--accent)",
-                      width: t.totalModules > 0 ? `${(t.modulesPassed / t.totalModules) * 100}%` : "0%",
-                    }}
-                  />
-                </div>
-                <div className="mt-2 flex justify-between font-mono text-[11px]" style={{ color: "var(--ink-faint)" }}>
-                  <span>{t.started ? `${t.modulesPassed}/${t.totalModules} modules` : "Not started"}</span>
-                  <span>
-                    Lab: {Math.min(t.qualifyingTickets, t.requiredTickets)}/{t.requiredTickets} tickets
-                  </span>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+            </section>
+          );
+        })}
       </main>
     </>
   );

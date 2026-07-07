@@ -3,7 +3,11 @@ import type { ScenarioCategory } from "./types";
 import type { ChatMessage } from "./openrouter";
 import { extractJsonFromText, ParseError } from "./parsing";
 
-export type TrackId = "aplus" | "networkplus" | "securityplus" | "ccna";
+export type TrackId =
+  | "aplus" | "networkplus" | "linuxplus" | "cloudplus"
+  | "securityplus" | "cysa" | "pentestplus" | "securityx"
+  | "ccna" | "ccnpsec" | "ceh" | "sscp" | "cissp" | "oscp"
+  | "fortinet" | "vmware";
 
 export interface QuizQuestion {
   question: string;
@@ -28,38 +32,59 @@ export interface TrackMeta {
   title: string;
   short: string;
   description: string;
+  tier: "foundation" | "security" | "vendor";
   categories: ScenarioCategory[];
 }
 
 export const TRACKS: TrackMeta[] = [
-  {
-    id: "aplus",
-    title: "CompTIA A+",
-    short: "APL",
+  { id: "aplus", title: "CompTIA A+", short: "APL", tier: "foundation",
     description: "PC hardware, operating systems, peripherals, and day-one desktop support skills.",
-    categories: ["hardware", "printer", "app-crash"],
-  },
-  {
-    id: "networkplus",
-    title: "CompTIA Network+",
-    short: "NET",
+    categories: ["hardware", "printer", "app-crash"] },
+  { id: "networkplus", title: "CompTIA Network+", short: "NET", tier: "foundation",
     description: "Networking fundamentals: TCP/IP, DNS, DHCP, Wi-Fi, VPNs, and troubleshooting methodology.",
-    categories: ["network"],
-  },
-  {
-    id: "securityplus",
-    title: "CompTIA Security+",
-    short: "SEC",
+    categories: ["network"] },
+  { id: "linuxplus", title: "CompTIA Linux+", short: "LNX", tier: "foundation",
+    description: "Linux administration: services, permissions, storage, shell scripting, and hardening.",
+    categories: ["linux"] },
+  { id: "cloudplus", title: "CompTIA Cloud+", short: "CLD", tier: "foundation",
+    description: "Cloud architecture, deployment, SaaS operations, and troubleshooting hybrid environments.",
+    categories: ["cloud"] },
+  { id: "securityplus", title: "CompTIA Security+", short: "SEC", tier: "security",
     description: "Threats, malware response, identity and access management, and security operations.",
-    categories: ["malware", "password"],
-  },
-  {
-    id: "ccna",
-    title: "Cisco CCNA",
-    short: "CCN",
+    categories: ["malware", "password", "phishing"] },
+  { id: "cysa", title: "CompTIA CySA+", short: "CSA", tier: "security",
+    description: "Security analytics: SIEM triage, threat hunting, incident response, and detection tuning.",
+    categories: ["siem", "malware"] },
+  { id: "pentestplus", title: "CompTIA PenTest+", short: "PEN", tier: "security",
+    description: "Penetration testing: scoping, scanning, exploitation, and reporting findings.",
+    categories: ["pentest"] },
+  { id: "securityx", title: "CompTIA SecurityX (CASP+)", short: "CSX", tier: "security",
+    description: "Advanced security architecture and engineering across enterprise networks.",
+    categories: ["firewall", "siem", "access"] },
+  { id: "ccna", title: "Cisco CCNA", short: "CCN", tier: "vendor",
     description: "Routing and switching, IP services, network access, and virtualization fundamentals.",
-    categories: ["network", "vm"],
-  },
+    categories: ["network", "vm"] },
+  { id: "ccnpsec", title: "Cisco CCNP Security", short: "CNS", tier: "vendor",
+    description: "Enterprise network security: firewalls, VPNs, secure access, and visibility.",
+    categories: ["firewall", "network"] },
+  { id: "ceh", title: "EC-Council CEH", short: "CEH", tier: "vendor",
+    description: "Ethical hacking: attack techniques, social engineering, and countermeasures.",
+    categories: ["pentest", "phishing"] },
+  { id: "sscp", title: "ISC2 SSCP", short: "SSC", tier: "vendor",
+    description: "Security operations and administration: access controls, monitoring, and response.",
+    categories: ["access", "password"] },
+  { id: "cissp", title: "ISC2 CISSP", short: "CIS", tier: "vendor",
+    description: "Security leadership across eight domains: architecture, IAM, operations, and risk.",
+    categories: ["access", "siem", "cloud"] },
+  { id: "oscp", title: "OffSec OSCP", short: "OSC", tier: "vendor",
+    description: "Hands-on offensive security: enumeration, exploitation, and privilege escalation.",
+    categories: ["pentest", "linux"] },
+  { id: "fortinet", title: "Fortinet FCP (NSE 4)", short: "FTN", tier: "vendor",
+    description: "FortiGate administration: interfaces, policies, NAT, VPNs, and security profiles.",
+    categories: ["firewall"] },
+  { id: "vmware", title: "VMware VCP-DCV", short: "VMW", tier: "vendor",
+    description: "vSphere data center virtualization: ESXi, vCenter, storage, vMotion, and HA.",
+    categories: ["vm"] },
 ];
 
 export const QUIZ_PASS_PERCENT = 80;
