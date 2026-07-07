@@ -190,19 +190,45 @@ See [CLAUDE.md](CLAUDE.md) for the full architecture notes.
 
 The app runs on Vercel out of the box. Data lives in **libSQL** via `@libsql/client`, which uses a
 local SQLite file in development and **[Turso](https://turso.tech)** (or any libSQL server) in
-production — no ephemeral-filesystem problems.
+production. **You must point it at a Turso database** — Vercel's serverless filesystem is read-only,
+so without `TURSO_DATABASE_URL` the app falls back to a local file it can't write and auth routes
+return **500** ("Something went wrong").
 
-1. Create a Turso database and grab its URL + auth token (`turso db create techbench && turso db show --url techbench && turso db tokens create techbench`).
-2. Import the repo at [vercel.com/new](https://vercel.com/new).
-3. Set the environment variables above **plus**:
+### 1. Create a Turso database (free tier)
 
-   ```bash
-   TURSO_DATABASE_URL=libsql://your-db.turso.io
-   TURSO_AUTH_TOKEN=your-turso-token
-   NEXT_PUBLIC_SITE_URL=https://your-domain.vercel.app   # for canonical URLs & OG tags
-   ```
+```bash
+curl -sSfL https://get.tur.so/install.sh | bash   # or: brew install tursodatabase/tap/turso
+turso auth signup
+turso db create techbench-academy
+turso db show techbench-academy --url             # → TURSO_DATABASE_URL (libsql://…)
+turso db tokens create techbench-academy          # → TURSO_AUTH_TOKEN
+```
 
-4. Deploy. The schema is created automatically on first request.
+> Prefer no CLI? Add the **Turso** integration from the Vercel Marketplace — it injects
+> `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` automatically.
+
+### 2. Set environment variables
+
+Import the repo at [vercel.com/new](https://vercel.com/new), then add these under
+**Settings → Environment Variables** (Production **and** Preview):
+
+| Variable | Required | Value |
+|---|---|---|
+| `TURSO_DATABASE_URL` | ✅ | `libsql://techbench-academy-….turso.io` |
+| `TURSO_AUTH_TOKEN` | ✅ | token from step 1 |
+| `AUTH_SECRET` | ✅ | any long random string (session signing) |
+| `ANTHROPIC_BASE_URL` | ✅ | `https://openrouter.ai/api` |
+| `ANTHROPIC_AUTH_TOKEN` | ✅ | your OpenRouter key |
+| `ANTHROPIC_MODEL` | ✅ | e.g. `openai/gpt-oss-120b:free` |
+| `ANTHROPIC_FALLBACK_MODELS` | — | comma list, max 3 total |
+| `NEXT_PUBLIC_SITE_URL` | — | `https://your-domain.vercel.app` (canonical URLs & OG tags) |
+| `GMAIL_USER` / `GMAIL_APP_PASSWORD` | — | enables the contact form (Gmail App Password) |
+
+### 3. Deploy
+
+Deploy (or redeploy after adding vars). The schema is created automatically on first request —
+no migration step. If auth still 500s, check the deployment's **Function logs**: a missing
+`TURSO_DATABASE_URL` now logs an explicit error naming the fix.
 
 Locally, no Turso is needed — the app defaults to `file:./data/app.db`.
 
