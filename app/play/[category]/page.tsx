@@ -7,6 +7,7 @@ import { TicketHeader } from "@/components/TicketHeader";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatBubble, isRunCommand } from "@/components/ChatBubble";
 import { ResolutionBanner } from "@/components/ResolutionBanner";
+import { VmOverlay } from "@/components/vm/VmOverlay";
 import type { ScenarioSeed, TicketPreview, TranscriptMessage, GradeResult } from "@/lib/types";
 
 type LoadState = "loading" | "ready" | "error";
@@ -47,6 +48,8 @@ export default function PlayPage() {
   const [gradeResult, setGradeResult] = useState<GradeResult | null>(null);
   const [closing, setClosing] = useState(false);
   const [resolutionNotes, setResolutionNotes] = useState("");
+  const [vmOpen, setVmOpen] = useState(false);
+  const [vmResolved, setVmResolved] = useState(false);
   const logEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -191,6 +194,16 @@ export default function PlayPage() {
         priority={priority}
         status={gradeResult ? "resolved" : "in-progress"}
       />
+      <div className="flex flex-wrap items-center gap-3">
+        <button className="tool-btn" onClick={() => setVmOpen(true)} disabled={!!gradeResult}>
+          🖥 Connect to user&apos;s machine
+        </button>
+        {vmResolved && (
+          <span className="font-mono text-[11px] uppercase" style={{ color: "var(--accent)" }}>
+            Machine fault resolved — close the ticket with your notes
+          </span>
+        )}
+      </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[260px_1fr]">
         <Sidebar
           seed={seed}
@@ -274,6 +287,10 @@ export default function PlayPage() {
       )}
 
       {gradeResult && <ResolutionBanner result={gradeResult} rootCause={seed.rootCause} />}
+
+      {vmOpen && (
+        <VmOverlay seed={seed} onClose={() => setVmOpen(false)} onResolved={() => setVmResolved(true)} />
+      )}
     </main>
   );
 }
