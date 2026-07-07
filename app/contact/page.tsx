@@ -101,12 +101,13 @@ export default function ContactPage() {
         <aside className="flex flex-col gap-5 md:col-span-2">
           <div className="panel p-6">
             <div className="flex items-center gap-4">
-              <span
-                className="flex h-14 w-14 flex-none items-center justify-center rounded-2xl font-display text-lg font-black"
-                style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
-              >
-                EO
-              </span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/Erick.png"
+                alt="Erick Omari"
+                className="h-16 w-16 flex-none rounded-2xl object-cover object-[center_10%] shadow-lg"
+                style={{ boxShadow: "0 0 0 2px var(--accent-line)" }}
+              />
               <div>
                 <p className="font-bold" style={{ color: "var(--ink)" }}>Erick Omari</p>
                 <p className="text-xs font-medium" style={{ color: "var(--accent)" }}>Builder · TechBench Academy</p>
