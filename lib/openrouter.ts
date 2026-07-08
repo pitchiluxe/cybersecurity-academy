@@ -161,6 +161,36 @@ export async function readOllamaStream(body: AsyncIterable<Uint8Array>): Promise
 export async function callOpenRouter(messages: ChatMessage[], options: CallOptions = {}): Promise<string> {
   const provider = getSettings().provider;
   const maxTokens = options.maxTokens ?? 4096;
+
+  // "auto" = best free cloud models first, local Ollama as the safety net.
+  const chain: ("openrouter" | "ollama")[] = provider === "auto" ? ["openrouter", "ollama"] : [provider];
+  const failures: string[] = [];
+  let lastError: MissingApiKeyError | OpenRouterRequestError | null = null;
+
+  for (const p of chain) {
+    try {
+      return await callProvider(p, messages, maxTokens);
+    } catch (err) {
+      if (err instanceof MissingApiKeyError || err instanceof OpenRouterRequestError) {
+        lastError = err;
+        failures.push(`${p === "ollama" ? "local Ollama" : "OpenRouter"}: ${err.message}`);
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  if (chain.length > 1) {
+    throw new OpenRouterRequestError(503, `All AI providers failed — ${failures.join(" · ")}`);
+  }
+  throw lastError ?? new OpenRouterRequestError(500, "OpenRouter request failed");
+}
+
+async function callProvider(
+  provider: "openrouter" | "ollama",
+  messages: ChatMessage[],
+  maxTokens: number
+): Promise<string> {
   const request = provider === "ollama" ? buildOllamaRequest(messages, maxTokens) : buildOpenRouterRequest(messages, maxTokens);
 
   let lastError: OpenRouterRequestError | null = null;

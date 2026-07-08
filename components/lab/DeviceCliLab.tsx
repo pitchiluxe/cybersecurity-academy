@@ -9,6 +9,7 @@ import {
 } from "@/lib/wiringLab";
 import { scoreFortigateLab, type FortigateScenario } from "@/lib/fortigateLab";
 import { readStashedBrief } from "@/lib/labCatalog";
+import LabTutor from "@/components/lab/LabTutor";
 import type { VmExchange } from "@/lib/vm";
 
 const WiringScene = dynamic(() => import("@/components/lab/WiringScene"), {
@@ -192,6 +193,16 @@ export default function DeviceCliLab({ config }: { config: DeviceCliLabConfig })
               </p>
             )}
           </div>
+
+          <LabTutor
+            context={{
+              engine: config.completeKind,
+              title: scenario.title,
+              backstory: scenario.backstory,
+              steps: [...scenario.wiring].sort((x, y) => x.step - y.step).map((s) => s.instruction),
+              tasks: scenario.tasks.map((t) => t.instruction),
+            }}
+          />
 
           <div className="flex min-h-0 flex-1 flex-col rounded-xl border" style={{ borderColor: "#1e293b", background: "#020617" }}>
             <div className="border-b px-3 py-1.5 font-mono text-[11px]" style={{ borderColor: "#1e293b", color: "#64748b" }}>

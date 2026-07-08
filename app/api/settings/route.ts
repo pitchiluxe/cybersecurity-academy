@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server";
-import { getSettings, saveSettings, type AppSettings, type Provider } from "@/lib/settings";
+import { getSettings, saveSettings, isProvider, type AppSettings } from "@/lib/settings";
 
 export async function GET() {
   return NextResponse.json({ settings: getSettings() }, { status: 200 });
-}
-
-function isProvider(value: unknown): value is Provider {
-  return value === "openrouter" || value === "ollama";
 }
 
 export async function PUT(request: Request) {

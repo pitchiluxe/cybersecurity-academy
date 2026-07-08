@@ -8,6 +8,7 @@ import {
   type WiringScenario, type RequiredConnection, type PortRef,
 } from "@/lib/wiringLab";
 import { readStashedBrief } from "@/lib/labCatalog";
+import LabTutor from "@/components/lab/LabTutor";
 
 const WiringScene = dynamic(() => import("@/components/lab/WiringScene"), {
   ssr: false,
@@ -136,6 +137,16 @@ function WiringLab() {
           <p className="mt-4 text-[12px]" style={{ color: "var(--ink-faint)" }}>
             Click a port, then click the port it connects to. Arrow keys move around · left-drag to orbit · right-drag to pan · scroll to zoom · click the axis cube (bottom-right) to snap to a view.
           </p>
+          <div className="mt-4">
+            <LabTutor
+              context={{
+                engine: "wiring",
+                title: scenario.title,
+                backstory: scenario.backstory,
+                steps: steps.map((s) => s.instruction),
+              }}
+            />
+          </div>
         </aside>
       </div>
     </main>

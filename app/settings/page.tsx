@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { THEMES, applyTheme, getStoredTheme, type ThemeId } from "@/lib/themes";
 
-type Provider = "openrouter" | "ollama";
+type Provider = "auto" | "openrouter" | "ollama";
 
 interface Settings {
   provider: Provider;
@@ -184,7 +184,25 @@ export default function SettingsPage() {
       {/* Provider selection */}
       <div className="panel p-5">
         <div className="panel-header mb-3">Provider</div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <button
+            type="button"
+            className="rounded-xl border p-4 text-left transition-colors duration-200"
+            style={{
+              borderColor: settings.provider === "auto" ? "var(--accent)" : "var(--border)",
+              background: settings.provider === "auto" ? "var(--accent-soft)" : "var(--surface)",
+              cursor: "pointer",
+            }}
+            onClick={() => save({ provider: "auto" })}
+            disabled={saving}
+          >
+            <div className="text-sm font-bold" style={{ color: "var(--ink)" }}>
+              Auto (recommended)
+            </div>
+            <div className="mt-1 text-xs" style={{ color: "var(--ink-muted)" }}>
+              Best free cloud models first; switches to local Ollama automatically when the free tier is capped or you&apos;re offline.
+            </div>
+          </button>
           <button
             type="button"
             className="rounded-xl border p-4 text-left transition-colors duration-200"

@@ -8,6 +8,7 @@ beforeEach(() => {
   process.env.ANTHROPIC_AUTH_TOKEN = "test-token";
   process.env.ANTHROPIC_MODEL = "deepseek/deepseek-v4-flash:free";
   delete process.env.ANTHROPIC_FALLBACK_MODELS;
+  delete process.env.AI_PROVIDER;
   global.fetch = jest.fn();
 });
 
@@ -36,11 +37,56 @@ describe("friendlyProviderError", () => {
   });
 });
 
+const enc = new TextEncoder();
+async function* chunks(...parts: string[]) {
+  for (const p of parts) yield enc.encode(p);
+}
+
+describe("auto provider failover", () => {
+  it("falls back to Ollama after OpenRouter exhausts its 429 retries", async () => {
+    process.env.AI_PROVIDER = "auto";
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({ ok: false, status: 429, json: async () => ({ error: "cap" }) })
+      .mockResolvedValueOnce({ ok: false, status: 429, json: async () => ({ error: "cap" }) })
+      .mockResolvedValueOnce({ ok: false, status: 429, json: async () => ({ error: "cap" }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        body: chunks('{"message":{"content":"local says hi"},"done":true}\n'),
+      });
+
+    await expect(callOpenRouter([{ role: "user", content: "hi" }])).resolves.toBe("local says hi");
+    expect(global.fetch).toHaveBeenCalledTimes(4);
+    const lastUrl = (global.fetch as jest.Mock).mock.calls[3][0];
+    expect(lastUrl).toBe("http://localhost:11434/api/chat");
+  });
+
+  it("skips straight to Ollama when the OpenRouter key is missing", async () => {
+    process.env.AI_PROVIDER = "auto";
+    process.env.ANTHROPIC_AUTH_TOKEN = "";
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      body: chunks('{"message":{"content":"no key needed"},"done":true}\n'),
+    });
+
+    await expect(callOpenRouter([{ role: "user", content: "hi" }])).resolves.toBe("no key needed");
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports both providers when everything fails", async () => {
+    process.env.AI_PROVIDER = "auto";
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({ ok: false, status: 429, json: async () => ({ error: "cap" }) })
+      .mockResolvedValueOnce({ ok: false, status: 429, json: async () => ({ error: "cap" }) })
+      .mockResolvedValueOnce({ ok: false, status: 429, json: async () => ({ error: "cap" }) })
+      .mockRejectedValueOnce(new Error("ECONNREFUSED"));
+
+    await expect(callOpenRouter([{ role: "user", content: "hi" }])).rejects.toThrow(/All AI providers failed/);
+  });
+});
+
 describe("readOllamaStream", () => {
-  const enc = new TextEncoder();
-  async function* chunks(...parts: string[]) {
-    for (const p of parts) yield enc.encode(p);
-  }
 
   it("accumulates message content across NDJSON lines even when chunks split a line", async () => {
     const body = chunks(

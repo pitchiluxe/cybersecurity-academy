@@ -1,7 +1,8 @@
 import path from "path";
 import fs from "fs";
 
-export type Provider = "openrouter" | "ollama";
+// "auto" tries OpenRouter's free models first, then falls back to local Ollama.
+export type Provider = "auto" | "openrouter" | "ollama";
 
 export interface AppSettings {
   provider: Provider;
@@ -17,8 +18,9 @@ export interface AppSettings {
 const SETTINGS_PATH = path.join(process.cwd(), "data", "settings.json");
 
 export function getDefaultSettings(): AppSettings {
+  const envProvider = process.env.AI_PROVIDER;
   return {
-    provider: "openrouter",
+    provider: isProvider(envProvider) ? envProvider : "openrouter",
     openrouterModel: process.env.ANTHROPIC_MODEL ?? "",
     openrouterFallbacks: (process.env.ANTHROPIC_FALLBACK_MODELS ?? "")
       .split(",")
@@ -29,8 +31,8 @@ export function getDefaultSettings(): AppSettings {
   };
 }
 
-function isProvider(value: unknown): value is Provider {
-  return value === "openrouter" || value === "ollama";
+export function isProvider(value: unknown): value is Provider {
+  return value === "auto" || value === "openrouter" || value === "ollama";
 }
 
 // Saved settings override .env.local defaults. Jest never touches the file so
