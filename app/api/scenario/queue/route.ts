@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { buildQueueMessages, isScenarioCategory, getCategoryMeta, randomQueueCount } from "@/lib/scenarios";
+import { buildQueueMessages, isScenarioCategory, getCategoryMeta, randomQueueCount, MIN_QUEUE_TICKETS } from "@/lib/scenarios";
+import { getSettings } from "@/lib/settings";
 import { callOpenRouter, MissingApiKeyError, OpenRouterRequestError } from "@/lib/openrouter";
 import { parseScenarioQueue, ParseError } from "@/lib/parsing";
 import { FALLBACK_SEEDS } from "@/lib/fallbackTickets";
@@ -25,7 +26,10 @@ function fallbackResponse(count: number): NextResponse {
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
-  const count = typeof body?.count === "number" && body.count > 0 ? body.count : randomQueueCount();
+  // Local Ollama on CPU generates a few tokens/second — a 20-ticket batch would
+  // outlive Node's 300s fetch header timeout, so pin local queues to the minimum.
+  const defaultCount = getSettings().provider === "ollama" ? MIN_QUEUE_TICKETS : randomQueueCount();
+  const count = typeof body?.count === "number" && body.count > 0 ? body.count : defaultCount;
 
   const messages = buildQueueMessages(count);
 

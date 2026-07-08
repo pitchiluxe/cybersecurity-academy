@@ -1,4 +1,4 @@
-import { callOpenRouter, MissingApiKeyError, OpenRouterRequestError, friendlyProviderError } from "./openrouter";
+import { callOpenRouter, readOllamaStream, MissingApiKeyError, OpenRouterRequestError, friendlyProviderError } from "./openrouter";
 
 const ORIGINAL_ENV = process.env;
 
@@ -33,6 +33,37 @@ describe("friendlyProviderError", () => {
   it("flags auth failures and provider outages", () => {
     expect(friendlyProviderError(401, {}, "openrouter")).toMatch(/key/i);
     expect(friendlyProviderError(503, {}, "openrouter")).toMatch(/temporarily unavailable/i);
+  });
+});
+
+describe("readOllamaStream", () => {
+  const enc = new TextEncoder();
+  async function* chunks(...parts: string[]) {
+    for (const p of parts) yield enc.encode(p);
+  }
+
+  it("accumulates message content across NDJSON lines even when chunks split a line", async () => {
+    const body = chunks(
+      '{"message":{"content":"Hel"},"done":false}\n{"message":{"con',
+      'tent":"lo"},"done":false}\n',
+      '{"message":{"content":""},"done":true}\n'
+    );
+    await expect(readOllamaStream(body)).resolves.toBe("Hello");
+  });
+
+  it("handles a final line without a trailing newline", async () => {
+    const body = chunks('{"message":{"content":"ok"},"done":true}');
+    await expect(readOllamaStream(body)).resolves.toBe("ok");
+  });
+
+  it("surfaces in-stream Ollama errors as OpenRouterRequestError", async () => {
+    const body = chunks('{"error":"model \'nope\' not found"}\n');
+    await expect(readOllamaStream(body)).rejects.toThrow(OpenRouterRequestError);
+    await expect(readOllamaStream(chunks('{"error":"model not found"}\n'))).rejects.toThrow(/model not found/);
+  });
+
+  it("rejects malformed stream chunks", async () => {
+    await expect(readOllamaStream(chunks("this is not json\n"))).rejects.toThrow(/malformed/i);
   });
 });
 

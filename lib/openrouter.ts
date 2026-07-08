@@ -108,17 +108,52 @@ function buildOpenRouterRequest(messages: ChatMessage[], maxTokens: number): Pro
   };
 }
 
-// Ollama exposes an OpenAI-compatible endpoint; no API key needed.
+// Ollama native chat endpoint, streamed. Local CPU generation can take minutes;
+// a non-streaming request sends zero bytes until it finishes, which trips Node
+// fetch's 300s header timeout. Streaming NDJSON keeps the connection alive.
 function buildOllamaRequest(messages: ChatMessage[], maxTokens: number): ProviderRequest {
   const settings = getSettings();
   if (!settings.ollamaModel) {
     throw new OpenRouterRequestError(500, "No Ollama model selected. Pick one in Settings.");
   }
   return {
-    url: `${settings.ollamaBaseUrl.replace(/\/$/, "")}/v1/chat/completions`,
+    url: `${settings.ollamaBaseUrl.replace(/\/$/, "")}/api/chat`,
     headers: { "Content-Type": "application/json" },
-    payload: { model: settings.ollamaModel, messages, max_tokens: maxTokens },
+    payload: { model: settings.ollamaModel, messages, stream: true, options: { num_predict: maxTokens } },
   };
+}
+
+// Accumulates the `message.content` fields of an Ollama NDJSON stream.
+export async function readOllamaStream(body: AsyncIterable<Uint8Array>): Promise<string> {
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let content = "";
+  const consumeLine = (line: string) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    let evt: unknown;
+    try {
+      evt = JSON.parse(trimmed);
+    } catch {
+      throw new OpenRouterRequestError(502, "Ollama sent a malformed stream chunk");
+    }
+    const err = (evt as { error?: unknown }).error;
+    if (typeof err === "string" && err) {
+      throw new OpenRouterRequestError(502, `Ollama error: ${err}`);
+    }
+    const piece = (evt as { message?: { content?: unknown } }).message?.content;
+    if (typeof piece === "string") content += piece;
+  };
+  for await (const chunk of body) {
+    buffer += decoder.decode(chunk, { stream: true });
+    let newline;
+    while ((newline = buffer.indexOf("\n")) !== -1) {
+      consumeLine(buffer.slice(0, newline));
+      buffer = buffer.slice(newline + 1);
+    }
+  }
+  consumeLine(buffer);
+  return content;
 }
 
 // Named for its original backend; now routes to OpenRouter or local Ollama
@@ -159,6 +194,17 @@ export async function callOpenRouter(messages: ChatMessage[], options: CallOptio
         continue;
       }
       throw lastError;
+    }
+
+    if (provider === "ollama") {
+      if (!response.body) {
+        throw new OpenRouterRequestError(502, "Ollama response had no body");
+      }
+      const content = await readOllamaStream(response.body as unknown as AsyncIterable<Uint8Array>);
+      if (content.length === 0) {
+        throw new OpenRouterRequestError(502, "Ollama response had no message content");
+      }
+      return content;
     }
 
     const data = await response.json().catch(() => ({}));
