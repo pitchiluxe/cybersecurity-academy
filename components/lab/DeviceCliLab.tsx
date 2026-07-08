@@ -159,7 +159,7 @@ export default function DeviceCliLab({ config }: { config: DeviceCliLabConfig })
           <WiringScene scenario={wiringScenario} made={made} packetsActive={complete} onAttempt={handleAttempt} flash={flash} />
         </div>
 
-        <aside className="flex h-[520px] flex-col gap-3">
+        <aside className="flex flex-col gap-3">
           <div className="panel p-4">
             <div className="panel-header">{wired ? "Configuration tasks" : "Step 1 — cable it in"}</div>
             <ol className="mt-2 flex flex-col gap-1.5">
@@ -203,37 +203,38 @@ export default function DeviceCliLab({ config }: { config: DeviceCliLabConfig })
               tasks: scenario.tasks.map((t) => t.instruction),
             }}
           />
-
-          <div className="flex min-h-0 flex-1 flex-col rounded-xl border" style={{ borderColor: "#1e293b", background: "#020617" }}>
-            <div className="border-b px-3 py-1.5 font-mono text-[11px]" style={{ borderColor: "#1e293b", color: "#64748b" }}>
-              {config.consoleName} {wired ? "— connected" : `— ${config.lockedHint}`}
-            </div>
-            <div className="flex-1 overflow-y-auto p-3 font-mono text-[12px] leading-relaxed" style={{ color: "#cbd5e1" }}>
-              {!wired && <div style={{ color: "#64748b" }}>Console locked until the unit is cabled.</div>}
-              {wired && <div style={{ color: "#64748b" }}>{config.loginHint}</div>}
-              {history.map((h, i) => (
-                <div key={i} className="mt-2">
-                  <div style={{ color: "#4ade80" }}>{config.historyPrompt} {h.command}</div>
-                  <pre className="whitespace-pre-wrap" style={{ color: "#cbd5e1" }}>{h.output}</pre>
-                </div>
-              ))}
-              {running && <div className="mt-2" style={{ color: "#64748b" }}>…</div>}
-              <div ref={endRef} />
-            </div>
-            <form onSubmit={runCommand} className="flex gap-2 border-t p-2" style={{ borderColor: "#1e293b" }}>
-              <span className="py-1 font-mono text-[12px]" style={{ color: "#4ade80" }}>{config.inputPrompt}</span>
-              <input
-                value={command}
-                onChange={(e) => setCommand(e.target.value)}
-                disabled={!wired || running || complete}
-                spellCheck={false}
-                className="flex-1 bg-transparent font-mono text-[12px] outline-none"
-                style={{ color: "#e2e8f0" }}
-                placeholder={!wired ? "cable the unit first" : running ? "running…" : config.inputPlaceholder}
-              />
-            </form>
-          </div>
         </aside>
+      </div>
+
+      {/* Full-width console row — the CLI needs room for commands and multi-line output. */}
+      <div className="mt-4 flex h-[340px] flex-col rounded-xl border" style={{ borderColor: "#1e293b", background: "#020617" }}>
+        <div className="border-b px-3 py-1.5 font-mono text-[11px]" style={{ borderColor: "#1e293b", color: "#64748b" }}>
+          {config.consoleName} {wired ? "— connected" : `— ${config.lockedHint}`}
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-3 font-mono text-[13px] leading-relaxed" style={{ color: "#cbd5e1" }}>
+          {!wired && <div style={{ color: "#64748b" }}>Console locked until the unit is cabled.</div>}
+          {wired && <div style={{ color: "#64748b" }}>{config.loginHint}</div>}
+          {history.map((h, i) => (
+            <div key={i} className="mt-2">
+              <div style={{ color: "#4ade80" }}>{config.historyPrompt} {h.command}</div>
+              <pre className="whitespace-pre-wrap" style={{ color: "#cbd5e1" }}>{h.output}</pre>
+            </div>
+          ))}
+          {running && <div className="mt-2" style={{ color: "#64748b" }}>…</div>}
+          <div ref={endRef} />
+        </div>
+        <form onSubmit={runCommand} className="flex gap-2 border-t p-2" style={{ borderColor: "#1e293b" }}>
+          <span className="py-1 font-mono text-[13px]" style={{ color: "#4ade80" }}>{config.inputPrompt}</span>
+          <input
+            value={command}
+            onChange={(e) => setCommand(e.target.value)}
+            disabled={!wired || running || complete}
+            spellCheck={false}
+            className="flex-1 bg-transparent font-mono text-[13px] outline-none"
+            style={{ color: "#e2e8f0" }}
+            placeholder={!wired ? "cable the unit first" : running ? "running…" : config.inputPlaceholder}
+          />
+        </form>
       </div>
     </main>
   );
