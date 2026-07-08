@@ -37,9 +37,12 @@ export function extractTaskMarkers(output: string): { cleaned: string; doneIds: 
   return { cleaned, doneIds, complete };
 }
 
-export function buildFortigateScenarioMessages(): ChatMessage[] {
+export function buildFortigateScenarioMessages(brief?: string): ChatMessage[] {
+  const jobLine = brief
+    ? `Base the lab on this dispatched job: ${brief}`
+    : "Pick one real-world job (new branch FortiGate deployment, web filtering rollout, port-forward for a camera NVR, IPsec tunnel repair)";
   const system = `You are designing a FortiGate firewall deployment lab for an IT trainee — a realistic job a field engineer gets.
-Pick one real-world job (new branch FortiGate deployment, web filtering rollout, port-forward for a camera NVR, IPsec tunnel repair) and write:
+${jobLine} and write:
 - devices: the FortiGate (kind "firewall", ports wan1, wan2, lan1-lan3, dmz — port kind "wan" for wan1/wan2, "lan" otherwise), an ISP modem (kind "modem"), and a LAN switch (kind "switch") — same shape as a wiring lab.
 - wiring: 2-3 required cable runs (modem→wan1, lan1→switch uplink, ...), numbered steps with instructions.
 - tasks: 3-5 FortiOS configuration tasks with kebab-case ids and precise instructions (e.g. "set WAN1 to DHCP client", "create LAN-to-WAN policy with NAT enabled", "block social-media category via web filter").

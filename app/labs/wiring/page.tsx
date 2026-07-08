@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 import {
   validateAttempt, isComplete, scoreLab, requiredKey, connectionKey,
   type WiringScenario, type RequiredConnection, type PortRef,
 } from "@/lib/wiringLab";
+import { readStashedBrief } from "@/lib/labCatalog";
 
 const WiringScene = dynamic(() => import("@/components/lab/WiringScene"), {
   ssr: false,
@@ -17,6 +19,17 @@ const WiringScene = dynamic(() => import("@/components/lab/WiringScene"), {
 });
 
 export default function WiringLabPage() {
+  return (
+    // useSearchParams needs a Suspense boundary on statically generated pages.
+    <Suspense fallback={null}>
+      <WiringLab />
+    </Suspense>
+  );
+}
+
+function WiringLab() {
+  const searchParams = useSearchParams();
+  const labIdParam = searchParams.get("lab");
   const [scenario, setScenario] = useState<WiringScenario | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [made, setMade] = useState<RequiredConnection[]>([]);
@@ -27,7 +40,8 @@ export default function WiringLabPage() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/lab/wiring", { method: "POST" })
+    const brief = readStashedBrief(labIdParam);
+    fetch("/api/lab/wiring", { method: "POST", body: JSON.stringify({ brief }) })
       .then(async (res) => {
         const body = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(body.error ?? "Could not load the lab.");
@@ -42,7 +56,7 @@ export default function WiringLabPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [labIdParam]);
 
   const madeKeys = useMemo(() => new Set(made.map(requiredKey)), [made]);
   const score = scoreLab(wrong);

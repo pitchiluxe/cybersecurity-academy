@@ -32,7 +32,8 @@ export default function Home() {
     let cancelled = false;
     async function loadQueue() {
       setLoadState("loading");
-      const res = await fetch("/api/scenario/queue", { method: "POST", body: JSON.stringify({ count: 9 }) });
+      // No count — the server rolls a random 5-10 ticket queue each load.
+      const res = await fetch("/api/scenario/queue", { method: "POST", body: JSON.stringify({}) });
       if (cancelled) return;
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));

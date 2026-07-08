@@ -10,3 +10,4 @@ tsconfig.tsbuildinfo
 *claude-notify-signals*
 # Playwright MCP scratch output
 .playwright-mcp/
+.vercel

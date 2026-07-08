@@ -10,8 +10,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Not logged in." }, { status: 401 });
   }
 
+  const body = await request.json().catch(() => ({}));
+  const brief = typeof body.brief === "string" && body.brief.trim() !== "" ? body.brief : undefined;
+
   try {
-    const text = await callOpenRouter(buildFortigateScenarioMessages());
+    const text = await callOpenRouter(buildFortigateScenarioMessages(brief));
     const scenario = parseFortigateScenario(text);
     return NextResponse.json({ scenario, fallback: false }, { status: 200 });
   } catch {

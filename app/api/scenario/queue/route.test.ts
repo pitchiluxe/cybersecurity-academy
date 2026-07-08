@@ -87,11 +87,15 @@ describe("POST /api/scenario/queue", () => {
     expect(body.tickets).toHaveLength(3);
   });
 
-  it("defaults count to 9 when not provided", async () => {
+  it("defaults to a random count between 5 and 10 when not provided", async () => {
     mockedCall.mockResolvedValue(JSON.stringify(validQueue));
     await POST(makeRequest({}));
     const [messages] = mockedCall.mock.calls[0];
     const system = messages.find((m: { role: string }) => m.role === "system");
-    expect(system.content).toContain("9");
+    const m = system.content.match(/queue of (\d+) training tickets/);
+    expect(m).not.toBeNull();
+    const count = Number(m[1]);
+    expect(count).toBeGreaterThanOrEqual(5);
+    expect(count).toBeLessThanOrEqual(10);
   });
 });

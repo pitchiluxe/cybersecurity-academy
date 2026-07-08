@@ -7,6 +7,7 @@ import type { ScenarioCategory } from "@/lib/types";
 const KIND_CATEGORY: Record<string, ScenarioCategory> = {
   wiring: "network",
   fortigate: "firewall",
+  router: "network",
 };
 
 export async function POST(request: Request) {

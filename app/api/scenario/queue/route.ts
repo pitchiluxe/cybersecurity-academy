@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { buildQueueMessages, isScenarioCategory, getCategoryMeta } from "@/lib/scenarios";
+import { buildQueueMessages, isScenarioCategory, getCategoryMeta, randomQueueCount } from "@/lib/scenarios";
 import { callOpenRouter, MissingApiKeyError, OpenRouterRequestError } from "@/lib/openrouter";
 import { parseScenarioQueue, ParseError } from "@/lib/parsing";
 import { FALLBACK_SEEDS } from "@/lib/fallbackTickets";
@@ -25,7 +25,7 @@ function fallbackResponse(count: number): NextResponse {
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
-  const count = typeof body?.count === "number" && body.count > 0 ? body.count : 9;
+  const count = typeof body?.count === "number" && body.count > 0 ? body.count : randomQueueCount();
 
   const messages = buildQueueMessages(count);
 

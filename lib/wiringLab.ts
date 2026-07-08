@@ -52,9 +52,12 @@ const DEVICE_KINDS: DeviceKind[] = ["modem", "router", "switch", "patchpanel", "
 const PORT_KINDS: PortKind[] = ["wan", "lan", "uplink", "console"];
 const CABLE_KINDS: CableKind[] = ["ethernet", "fiber", "console"];
 
-export function buildWiringScenarioMessages(): ChatMessage[] {
+export function buildWiringScenarioMessages(brief?: string): ChatMessage[] {
+  const jobLine = brief
+    ? `Base the lab on this dispatched job: ${brief}`
+    : "Invent a specific real-world backstory (new branch buildout, dead uplink after an office move, AP rollout...) and the physical wiring job that fixes it.";
   const system = `You are designing a hands-on network wiring lab for an IT trainee, set in a realistic small office or branch.
-Invent a specific real-world backstory (new branch buildout, dead uplink after an office move, AP rollout...) and the physical wiring job that fixes it.
+${jobLine}
 Use 4-6 devices from kinds: ${DEVICE_KINDS.join(", ")}. Port kinds: ${PORT_KINDS.join(", ")}. Cables: ${CABLE_KINDS.join(", ")}.
 3-6 requiredConnections, numbered steps in the order a real tech would wire them, each with a one-sentence instruction.
 Every fromDevice/toDevice must be a device id you defined, and every fromPort/toPort a port id on that device.

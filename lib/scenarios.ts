@@ -75,6 +75,14 @@ Respond with ONLY a JSON object, no prose, no markdown fences, matching exactly 
   ];
 }
 
+export const MIN_QUEUE_TICKETS = 5;
+export const MAX_QUEUE_TICKETS = 10;
+
+/** Random queue size, 5-10 inclusive — used whenever the client doesn't ask for a specific count. */
+export function randomQueueCount(): number {
+  return MIN_QUEUE_TICKETS + Math.floor(Math.random() * (MAX_QUEUE_TICKETS - MIN_QUEUE_TICKETS + 1));
+}
+
 export function buildQueueMessages(count: number, varietySeed: number = Math.floor(Math.random() * 1_000_000)): ChatMessage[] {
   const categoryList = SCENARIO_CATEGORIES.map((c) => `"${c.id}" (${c.label})`).join(", ");
   const system = `You are generating a queue of ${count} training tickets for an IT helpdesk trainee.
