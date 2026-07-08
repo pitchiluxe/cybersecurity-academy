@@ -75,10 +75,10 @@ Respond with ONLY a JSON object, no prose, no markdown fences, matching exactly 
   ];
 }
 
-export const MIN_QUEUE_TICKETS = 5;
-export const MAX_QUEUE_TICKETS = 10;
+export const MIN_QUEUE_TICKETS = 10;
+export const MAX_QUEUE_TICKETS = 20;
 
-/** Random queue size, 5-10 inclusive — used whenever the client doesn't ask for a specific count. */
+/** Random queue size, 10-20 inclusive — used whenever the client doesn't ask for a specific count. */
 export function randomQueueCount(): number {
   return MIN_QUEUE_TICKETS + Math.floor(Math.random() * (MAX_QUEUE_TICKETS - MIN_QUEUE_TICKETS + 1));
 }

@@ -87,7 +87,7 @@ describe("POST /api/scenario/queue", () => {
     expect(body.tickets).toHaveLength(3);
   });
 
-  it("defaults to a random count between 5 and 10 when not provided", async () => {
+  it("defaults to a random count between 10 and 20 when not provided", async () => {
     mockedCall.mockResolvedValue(JSON.stringify(validQueue));
     await POST(makeRequest({}));
     const [messages] = mockedCall.mock.calls[0];
@@ -95,7 +95,14 @@ describe("POST /api/scenario/queue", () => {
     const m = system.content.match(/queue of (\d+) training tickets/);
     expect(m).not.toBeNull();
     const count = Number(m[1]);
-    expect(count).toBeGreaterThanOrEqual(5);
-    expect(count).toBeLessThanOrEqual(10);
+    expect(count).toBeGreaterThanOrEqual(10);
+    expect(count).toBeLessThanOrEqual(20);
+  });
+
+  it("raises the response token budget for large queues", async () => {
+    mockedCall.mockResolvedValue(JSON.stringify(validQueue));
+    await POST(makeRequest({}));
+    const [, options] = mockedCall.mock.calls[0];
+    expect(options).toEqual({ maxTokens: 8192 });
   });
 });

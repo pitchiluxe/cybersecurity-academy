@@ -31,7 +31,8 @@ export async function POST(request: Request) {
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const text = await callOpenRouter(messages);
+      // 10-20 tickets of structured JSON can overflow the default 4096-token budget.
+      const text = await callOpenRouter(messages, { maxTokens: 8192 });
       const seeds = parseScenarioQueue(text, isScenarioCategory);
       return NextResponse.json({ tickets: toTickets(seeds) }, { status: 200 });
     } catch (err) {

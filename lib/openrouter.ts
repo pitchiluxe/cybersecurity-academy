@@ -76,8 +76,13 @@ interface ProviderRequest {
   payload: Record<string, unknown>;
 }
 
+export interface CallOptions {
+  /** Response token budget; bump for large structured outputs (e.g. 10-20 ticket queues). Default 4096. */
+  maxTokens?: number;
+}
+
 // OpenRouter caps the `models` fallback-routing array at 3 entries.
-function buildOpenRouterRequest(messages: ChatMessage[]): ProviderRequest {
+function buildOpenRouterRequest(messages: ChatMessage[], maxTokens: number): ProviderRequest {
   const baseUrl = process.env.ANTHROPIC_BASE_URL;
   const token = process.env.ANTHROPIC_AUTH_TOKEN;
   const settings = getSettings();
@@ -91,7 +96,7 @@ function buildOpenRouterRequest(messages: ChatMessage[]): ProviderRequest {
   }
 
   const modelList = [model, ...settings.openrouterFallbacks.filter((m) => m !== model)].slice(0, 3);
-  const payload: Record<string, unknown> = { model, messages, max_tokens: 4096 };
+  const payload: Record<string, unknown> = { model, messages, max_tokens: maxTokens };
   if (modelList.length > 1) {
     payload.models = modelList;
   }
@@ -104,7 +109,7 @@ function buildOpenRouterRequest(messages: ChatMessage[]): ProviderRequest {
 }
 
 // Ollama exposes an OpenAI-compatible endpoint; no API key needed.
-function buildOllamaRequest(messages: ChatMessage[]): ProviderRequest {
+function buildOllamaRequest(messages: ChatMessage[], maxTokens: number): ProviderRequest {
   const settings = getSettings();
   if (!settings.ollamaModel) {
     throw new OpenRouterRequestError(500, "No Ollama model selected. Pick one in Settings.");
@@ -112,15 +117,16 @@ function buildOllamaRequest(messages: ChatMessage[]): ProviderRequest {
   return {
     url: `${settings.ollamaBaseUrl.replace(/\/$/, "")}/v1/chat/completions`,
     headers: { "Content-Type": "application/json" },
-    payload: { model: settings.ollamaModel, messages, max_tokens: 4096 },
+    payload: { model: settings.ollamaModel, messages, max_tokens: maxTokens },
   };
 }
 
 // Named for its original backend; now routes to OpenRouter or local Ollama
 // depending on saved settings.
-export async function callOpenRouter(messages: ChatMessage[]): Promise<string> {
+export async function callOpenRouter(messages: ChatMessage[], options: CallOptions = {}): Promise<string> {
   const provider = getSettings().provider;
-  const request = provider === "ollama" ? buildOllamaRequest(messages) : buildOpenRouterRequest(messages);
+  const maxTokens = options.maxTokens ?? 4096;
+  const request = provider === "ollama" ? buildOllamaRequest(messages, maxTokens) : buildOpenRouterRequest(messages, maxTokens);
 
   let lastError: OpenRouterRequestError | null = null;
 
