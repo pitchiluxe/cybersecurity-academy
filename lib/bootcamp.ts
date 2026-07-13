@@ -32,7 +32,7 @@ export interface BootcampMeta {
 export const BOOTCAMP_PASS_SCORE = 80;
 
 export const BOOTCAMPS: BootcampMeta[] = [
-  { id: "ccna", title: "Summer of CCNA", certName: "Cisco CCNA", duration: "27 skills · ~17 weeks",
+  { id: "ccna", title: "CCNA Bootcamp", certName: "Cisco CCNA", duration: "27 skills · ~17 weeks",
     blurb: "The full Academy CCNA plan: from 'what is a network?' to OSPF, VLANs, security and automation — building Castle Rysen Coffee's network the whole way." },
   { id: "ccnp", title: "CCNP Enterprise Bootcamp", certName: "Cisco CCNP Enterprise", duration: "12 skills · ~12 weeks",
     blurb: "Advanced routing and switching for the engineer who passed CCNA: OSPF at scale, BGP, redundancy, wireless, SD-WAN concepts, and enterprise automation." },
@@ -600,7 +600,7 @@ export interface BootcampChapter {
 export function buildBootcampChapterMessages(skill: BootcampSkill): ChatMessage[] {
   const camp = getBootcamp(skill.camp);
   const certName = camp?.certName ?? "certification";
-  const storyLine = skill.camp === "ccna" ? ' Tie examples back to the Castle Rysen Coffee storyline ("Summer of CCNA").' : "";
+  const storyLine = skill.camp === "ccna" ? " Tie examples back to the Castle Rysen Coffee storyline." : "";
   const system = `You are writing one chapter of a ${certName} bootcamp for an IT trainee.
 Chapter: Skill ${String(skill.num).padStart(2, "0")} — ${skill.title}. Scope: ${skill.blurb}
 Topics to cover, in order: ${skill.lessons.join("; ")}.
