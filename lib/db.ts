@@ -66,6 +66,19 @@ const SCHEMA = `
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE (user_id, skill)
   );
+  CREATE TABLE IF NOT EXISTS bootcamp_enrollments (
+    user_id INTEGER NOT NULL,
+    camp TEXT NOT NULL,
+    started_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (user_id, camp)
+  );
+  CREATE TABLE IF NOT EXISTS bootcamp_progress (
+    user_id INTEGER NOT NULL,
+    skill TEXT NOT NULL,
+    quiz_score INTEGER NOT NULL DEFAULT 0,
+    lab_done INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (user_id, skill)
+  );
 `;
 
 function getClient(): Client {
@@ -190,6 +203,45 @@ export async function saveBootcampChapter(userId: number, skill: string, content
   ]);
 }
 
+/** Records the trainee's actual start date the first time they open a bootcamp. */
+export async function enrollBootcamp(userId: number, camp: string): Promise<string> {
+  await exec("INSERT OR IGNORE INTO bootcamp_enrollments (user_id, camp) VALUES (?, ?)", [userId, camp]);
+  const rs = await exec("SELECT started_at FROM bootcamp_enrollments WHERE user_id = ? AND camp = ?", [userId, camp]);
+  return String(rs.rows[0].started_at);
+}
+
+export interface BootcampProgressRow {
+  skill: string;
+  quiz_score: number;
+  lab_done: number;
+}
+
+export async function getBootcampProgress(userId: number, skills: string[]): Promise<BootcampProgressRow[]> {
+  if (skills.length === 0) return [];
+  const placeholders = skills.map(() => "?").join(",");
+  const rs = await exec(
+    `SELECT skill, quiz_score, lab_done FROM bootcamp_progress WHERE user_id = ? AND skill IN (${placeholders})`,
+    [userId, ...skills]
+  );
+  return rs.rows.map((r) => ({ skill: String(r.skill), quiz_score: num(r.quiz_score), lab_done: num(r.lab_done) }));
+}
+
+export async function upsertBootcampQuizScore(userId: number, skill: string, score: number): Promise<void> {
+  await exec(
+    `INSERT INTO bootcamp_progress (user_id, skill, quiz_score) VALUES (?, ?, ?)
+     ON CONFLICT(user_id, skill) DO UPDATE SET quiz_score = MAX(quiz_score, excluded.quiz_score)`,
+    [userId, skill, score]
+  );
+}
+
+export async function markBootcampLabDone(userId: number, skill: string): Promise<void> {
+  await exec(
+    `INSERT INTO bootcamp_progress (user_id, skill, lab_done) VALUES (?, ?, 1)
+     ON CONFLICT(user_id, skill) DO UPDATE SET lab_done = 1`,
+    [userId, skill]
+  );
+}
+
 export async function getExamRow(userId: number, track: string): Promise<{ id: number; content_json: string } | undefined> {
   const rs = await exec("SELECT id, content_json FROM exams WHERE user_id = ? AND track = ?", [userId, track]);
   const r = rs.rows[0];
@@ -235,6 +287,15 @@ export async function recordModulePass(courseId: number, moduleIndex: number, sc
 export async function getCertificates(userId: number): Promise<CertificateRow[]> {
   const rs = await exec("SELECT * FROM certificates WHERE user_id = ? ORDER BY issued_at", [userId]);
   return rs.rows.map(mapCert);
+}
+
+export async function getCertificateForTrack(
+  userId: number,
+  track: string
+): Promise<{ cert_code: string; issued_at: string } | undefined> {
+  const rs = await exec("SELECT cert_code, issued_at FROM certificates WHERE user_id = ? AND track = ?", [userId, track]);
+  const r = rs.rows[0];
+  return r ? { cert_code: String(r.cert_code), issued_at: String(r.issued_at) } : undefined;
 }
 
 export async function hasCertificate(userId: number, track: string): Promise<boolean> {

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCookieValue, verifySessionToken, SESSION_COOKIE_NAME } from "@/lib/session";
-import { isBootcampSkillId, type BootcampChapter } from "@/lib/bootcamp";
-import { getBootcampChapterRow } from "@/lib/db";
+import { getBootcampSkill, isBootcampSkillId, BOOTCAMP_PASS_SCORE, type BootcampChapter } from "@/lib/bootcamp";
+import { getBootcampChapterRow, upsertBootcampQuizScore } from "@/lib/db";
+import { checkAndIssueBootcampCertificate } from "@/lib/certification";
 
 export async function POST(request: Request) {
   const token = getCookieValue(request, SESSION_COOKIE_NAME);
@@ -31,8 +32,17 @@ export async function POST(request: Request) {
 
   const correct = chapter.quiz.map((q, i) => answers[i] === q.answerIndex);
   const score = Math.round((correct.filter(Boolean).length / chapter.quiz.length) * 100);
+  const passed = score >= BOOTCAMP_PASS_SCORE;
+
+  // Persist the best score; a pass may complete the camp and earn the certificate.
+  await upsertBootcampQuizScore(session.userId, skillId, score);
+  let newCertificate: string | null = null;
+  if (passed) {
+    newCertificate = await checkAndIssueBootcampCertificate(session.userId, getBootcampSkill(skillId)!.camp);
+  }
+
   return NextResponse.json(
-    { score, passed: score >= 80, correct, answerKey: chapter.quiz.map((q) => q.answerIndex) },
+    { score, passed, correct, answerKey: chapter.quiz.map((q) => q.answerIndex), newCertificate },
     { status: 200 }
   );
 }

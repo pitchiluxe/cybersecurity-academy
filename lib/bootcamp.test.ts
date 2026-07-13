@@ -1,5 +1,10 @@
 import {
   BOOTCAMP_SKILLS,
+  ALL_BOOTCAMP_SKILLS,
+  BOOTCAMPS,
+  skillsForBootcamp,
+  getBootcamp,
+  isBootcampId,
   getBootcampSkill,
   isBootcampSkillId,
   buildBootcampChapterMessages,
@@ -8,15 +13,33 @@ import {
 } from "./bootcamp";
 import { isScenarioCategory } from "./scenarios";
 
+describe("BOOTCAMPS", () => {
+  it("offers CCNA, CCNP, Security+, Network+ and A+ camps", () => {
+    expect(BOOTCAMPS.map((b) => b.id)).toEqual(["ccna", "ccnp", "secplus", "netplus", "aplus"]);
+    expect(getBootcamp("secplus")?.certName).toBe("CompTIA Security+");
+    expect(isBootcampId("ccnp")).toBe(true);
+    expect(isBootcampId("mcse")).toBe(false);
+  });
+
+  it("every camp has skills and every skill belongs to a real camp", () => {
+    for (const b of BOOTCAMPS) {
+      expect(skillsForBootcamp(b.id).length).toBeGreaterThanOrEqual(10);
+    }
+    for (const s of ALL_BOOTCAMP_SKILLS) {
+      expect(isBootcampId(s.camp)).toBe(true);
+    }
+  });
+});
+
 describe("BOOTCAMP_SKILLS", () => {
-  it("covers all 27 skills of the study plan with unique ids", () => {
+  it("covers all 27 CCNA skills of the study plan with globally unique ids", () => {
     expect(BOOTCAMP_SKILLS).toHaveLength(27);
-    expect(new Set(BOOTCAMP_SKILLS.map((s) => s.id)).size).toBe(27);
+    expect(new Set(ALL_BOOTCAMP_SKILLS.map((s) => s.id)).size).toBe(ALL_BOOTCAMP_SKILLS.length);
     expect(BOOTCAMP_SKILLS.map((s) => s.num)).toEqual(Array.from({ length: 27 }, (_, i) => i));
   });
 
   it("every skill has lessons and a valid VM lab seed", () => {
-    for (const s of BOOTCAMP_SKILLS) {
+    for (const s of ALL_BOOTCAMP_SKILLS) {
       expect(s.lessons.length).toBeGreaterThan(0);
       expect(isScenarioCategory(s.labSeed.category)).toBe(true);
       expect(s.labSeed.rootCause.length).toBeGreaterThan(20);
@@ -25,8 +48,10 @@ describe("BOOTCAMP_SKILLS", () => {
     }
   });
 
-  it("looks up skills by id", () => {
+  it("looks up skills by id across camps", () => {
     expect(getBootcampSkill("s12")?.title).toContain("VLAN");
+    expect(getBootcampSkill("ccnp-04")?.title).toContain("BGP");
+    expect(getBootcampSkill("sec-03")?.title).toContain("Cryptography");
     expect(isBootcampSkillId("s00")).toBe(true);
     expect(isBootcampSkillId("s99")).toBe(false);
   });
