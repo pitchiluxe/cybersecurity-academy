@@ -10,21 +10,18 @@ export async function GET(request: Request) {
   // Temporary diagnostics for the hosted deployment (?debug=1): which store the
   // runtime actually reads. Remove once the Vercel settings issue is closed.
   if (new URL(request.url).searchParams.get("debug") === "1") {
-    let dbRaw: string | null = null;
-    let dbError: string | null = null;
+    const debug: Record<string, unknown> = {
+      dbHost: (process.env.TURSO_DATABASE_URL ?? "file").slice(0, 64),
+      vercel: !!process.env.VERCEL,
+    };
     try {
-      const { getAppSettingsJson } = await import("@/lib/db");
-      dbRaw = (await getAppSettingsJson())?.slice(0, 80) ?? null;
+      const { getAppSettingsJson, saveAppSettingsJson } = await import("@/lib/db");
+      await saveAppSettingsJson(JSON.stringify({ probe: Date.now() }));
+      debug.readAfterWrite = (await getAppSettingsJson())?.slice(0, 60) ?? null;
     } catch (err) {
-      dbError = err instanceof Error ? err.message : String(err);
+      debug.dbError = err instanceof Error ? err.message : String(err);
     }
-    return NextResponse.json(
-      {
-        settings,
-        debug: { dbRaw, dbError, dbHost: (process.env.TURSO_DATABASE_URL ?? "file").slice(0, 48), vercel: !!process.env.VERCEL },
-      },
-      { status: 200 }
-    );
+    return NextResponse.json({ settings, debug }, { status: 200 });
   }
   return NextResponse.json({ settings }, { status: 200 });
 }
