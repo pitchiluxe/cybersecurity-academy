@@ -5,24 +5,8 @@ import { getSettings, saveSettings, isProvider, type AppSettings } from "@/lib/s
 // route then serves a frozen response and rejects PUT with a 405.
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
-  const settings = await getSettings();
-  // Temporary diagnostics for the hosted deployment (?debug=1): which store the
-  // runtime actually reads. Remove once the Vercel settings issue is closed.
-  if (new URL(request.url).searchParams.get("debug") === "1") {
-    const debug: Record<string, unknown> = {
-      dbHost: (process.env.TURSO_DATABASE_URL ?? "file").slice(0, 64),
-      vercel: !!process.env.VERCEL,
-    };
-    try {
-      const { debugSettingsReads } = await import("@/lib/db");
-      Object.assign(debug, await debugSettingsReads());
-    } catch (err) {
-      debug.dbError = err instanceof Error ? err.message : String(err);
-    }
-    return NextResponse.json({ settings, debug }, { status: 200 });
-  }
-  return NextResponse.json({ settings }, { status: 200 });
+export async function GET() {
+  return NextResponse.json({ settings: await getSettings() }, { status: 200 });
 }
 
 export async function PUT(request: Request) {

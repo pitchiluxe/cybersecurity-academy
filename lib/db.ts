@@ -207,22 +207,13 @@ export async function saveBootcampChapter(userId: number, skill: string, content
   ]);
 }
 
-// Temporary diagnostics helper for the hosted settings investigation.
-export async function debugSettingsReads(): Promise<Record<string, unknown>> {
-  const all = await exec("SELECT id, typeof(id) AS t, substr(content_json, 1, 40) AS c FROM app_settings");
-  const literal = await exec("SELECT content_json FROM app_settings WHERE id = 1");
-  const param = await exec("SELECT content_json FROM app_settings WHERE id = ?", [1]);
-  return {
-    allRows: all.rows.map((r) => ({ id: r.id, t: r.t, c: r.c })),
-    literalHit: literal.rows.length,
-    paramHit: param.rows.length,
-  };
-}
-
 // App settings live in the DB so they persist on hosts with read-only
 // filesystems (Vercel); the singleton row keeps it one source of truth.
+// NOTE: the id filter must be a bound parameter — Turso's hosted server
+// fails to match `WHERE id = 1` written as a literal (0 rows) while the
+// parameterized form matches; every query in this file binds values.
 export async function getAppSettingsJson(): Promise<string | undefined> {
-  const rs = await exec("SELECT content_json FROM app_settings WHERE id = 1");
+  const rs = await exec("SELECT content_json FROM app_settings WHERE id = ?", [1]);
   const r = rs.rows[0];
   return r ? String(r.content_json) : undefined;
 }
