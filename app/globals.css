@@ -34,6 +34,12 @@
   --good-line: rgba(16, 185, 129, 0.4);
   --terminal-bg: #050810;
   --terminal-ink: #86EFAC;
+  --terminal-muted: #64748B;
+  --scene-bg: #0B1220;
+  --scene-floor: #0D1526;
+  --scene-grid: #1E293B;
+  --scene-grid-strong: #334155;
+  --scene-label: #E2E8F0;
 }
 
 /* Daylight — indigo on a clean zinc-neutral white (AIHub light). */
@@ -60,6 +66,12 @@
   --good-line: #A7F3D0;
   --terminal-bg: #0A0A0A;
   --terminal-ink: #86EFAC;
+  --terminal-muted: #9CA3AF;
+  --scene-bg: #E9EDF3;
+  --scene-floor: #DFE4EC;
+  --scene-grid: #C7CFDB;
+  --scene-grid-strong: #AAB6C8;
+  --scene-label: #1A1A1E;
 }
 
 /* Chalkboard — deep classroom green with chalk-white text. */
@@ -86,6 +98,12 @@
   --good-line: rgba(134, 239, 172, 0.4);
   --terminal-bg: #0C1711;
   --terminal-ink: #86EFAC;
+  --terminal-muted: #7F9A83;
+  --scene-bg: #0F1D16;
+  --scene-floor: #12241B;
+  --scene-grid: #2F4A3A;
+  --scene-grid-strong: #3E5F4B;
+  --scene-label: #ECF3E9;
 }
 
 /* Blueprint — a light, blue-tinted technical drawing palette. */
@@ -112,6 +130,12 @@
   --good-line: #BBF7D0;
   --terminal-bg: #0B2038;
   --terminal-ink: #7DD3FC;
+  --terminal-muted: #6580A4;
+  --scene-bg: #DCE8F7;
+  --scene-floor: #D0DFF2;
+  --scene-grid: #B4CAE7;
+  --scene-grid-strong: #8FB0DC;
+  --scene-label: #10233D;
 }
 
 /* Amber CRT — retro terminal glow for the lab-bench mood. */
@@ -138,6 +162,12 @@
   --good-line: rgba(134, 239, 172, 0.4);
   --terminal-bg: #060503;
   --terminal-ink: #FFB000;
+  --terminal-muted: #8A7A54;
+  --scene-bg: #0C0B07;
+  --scene-floor: #12100A;
+  --scene-grid: #2C2618;
+  --scene-grid-strong: #40361F;
+  --scene-label: #F5E6C8;
 }
 
 html {

@@ -236,42 +236,43 @@ export default function DeviceCliLab({ config }: { config: DeviceCliLabConfig })
         </aside>
       </div>
 
-      {/* Full-width console row — the CLI needs room for commands and multi-line output. */}
-      <div className="mt-4 flex h-[340px] flex-col rounded-xl border" style={{ borderColor: "#1e293b", background: "#020617" }}>
-        <div className="flex items-center justify-between border-b px-3 py-1.5 font-mono text-[11px]" style={{ borderColor: "#1e293b", color: "#64748b" }}>
+      {/* Full-width console row — the CLI needs room for commands and multi-line output.
+          Colors come from the theme's --terminal-* variables so every theme applies here too. */}
+      <div className="mt-4 flex h-[340px] flex-col overflow-hidden rounded-xl border" style={{ borderColor: "var(--border)", background: "var(--terminal-bg)" }}>
+        <div className="flex items-center justify-between border-b px-3 py-1.5 font-mono text-[11px]" style={{ borderColor: "var(--border)", color: "var(--terminal-muted)" }}>
           <span>{config.consoleName} {wired ? "— connected" : `— ${config.lockedHint}`}</span>
           <button
             type="button"
             onClick={askHint}
             disabled={!wired || hinting || complete}
             className="rounded border px-2 py-0.5 font-mono text-[11px] transition-colors disabled:opacity-40"
-            style={{ borderColor: "#334155", color: "#fbbf24", cursor: !wired || hinting || complete ? "default" : "pointer" }}
+            style={{ borderColor: "var(--border)", color: "var(--warn)", cursor: !wired || hinting || complete ? "default" : "pointer" }}
             title="Ask the AI for the next step. Each hint costs 5 points."
           >
             {hinting ? "thinking…" : "💡 hint (−5 pts)"}
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-3 font-mono text-[13px] leading-relaxed" style={{ color: "#cbd5e1" }}>
-          {!wired && <div style={{ color: "#64748b" }}>Console locked until the unit is cabled.</div>}
-          {wired && <div style={{ color: "#64748b" }}>{config.loginHint}</div>}
+        <div className="min-h-0 flex-1 overflow-y-auto p-3 font-mono text-[13px] leading-relaxed" style={{ color: "var(--terminal-ink)" }}>
+          {!wired && <div style={{ color: "var(--terminal-muted)" }}>Console locked until the unit is cabled.</div>}
+          {wired && <div style={{ color: "var(--terminal-muted)" }}>{config.loginHint}</div>}
           {history.map((h, i) => (
             <div key={i} className="mt-2">
-              <div style={{ color: "#4ade80" }}>{config.historyPrompt} {h.command}</div>
-              <pre className="whitespace-pre-wrap" style={{ color: "#cbd5e1" }}>{h.output}</pre>
+              <div style={{ color: "var(--terminal-ink)" }}>{config.historyPrompt} {h.command}</div>
+              <pre className="whitespace-pre-wrap" style={{ color: "var(--terminal-ink)", opacity: 0.82 }}>{h.output}</pre>
             </div>
           ))}
-          {running && <div className="mt-2" style={{ color: "#64748b" }}>…</div>}
+          {running && <div className="mt-2" style={{ color: "var(--terminal-muted)" }}>…</div>}
           <div ref={endRef} />
         </div>
-        <form onSubmit={runCommand} className="flex gap-2 border-t p-2" style={{ borderColor: "#1e293b" }}>
-          <span className="py-1 font-mono text-[13px]" style={{ color: "#4ade80" }}>{config.inputPrompt}</span>
+        <form onSubmit={runCommand} className="flex gap-2 border-t p-2" style={{ borderColor: "var(--border)" }}>
+          <span className="py-1 font-mono text-[13px]" style={{ color: "var(--terminal-ink)" }}>{config.inputPrompt}</span>
           <input
             value={command}
             onChange={(e) => setCommand(e.target.value)}
             disabled={!wired || running || complete}
             spellCheck={false}
             className="flex-1 bg-transparent font-mono text-[13px] outline-none"
-            style={{ color: "#e2e8f0" }}
+            style={{ color: "var(--terminal-ink)" }}
             placeholder={!wired ? "cable the unit first" : running ? "running…" : config.inputPlaceholder}
           />
         </form>

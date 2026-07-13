@@ -38,6 +38,33 @@ function profileOf(kind: DeviceKind): DeviceProfile {
   return PROFILES[kind] ?? PROFILES.switch;
 }
 
+interface SceneColors { bg: string; floor: string; grid: string; gridStrong: string; label: string }
+const DEFAULT_SCENE_COLORS: SceneColors = { bg: "#0b1220", floor: "#0d1526", grid: "#1e293b", gridStrong: "#334155", label: "#e2e8f0" };
+
+// The 3D room follows the active theme via the --scene-* CSS variables.
+function useSceneColors(): SceneColors {
+  const [colors, setColors] = useState<SceneColors>(DEFAULT_SCENE_COLORS);
+  useEffect(() => {
+    const readColors = () => {
+      const s = getComputedStyle(document.documentElement);
+      const pick = (name: string, fallback: string) => s.getPropertyValue(name).trim() || fallback;
+      setColors({
+        bg: pick("--scene-bg", DEFAULT_SCENE_COLORS.bg),
+        floor: pick("--scene-floor", DEFAULT_SCENE_COLORS.floor),
+        grid: pick("--scene-grid", DEFAULT_SCENE_COLORS.grid),
+        gridStrong: pick("--scene-grid-strong", DEFAULT_SCENE_COLORS.gridStrong),
+        label: pick("--scene-label", DEFAULT_SCENE_COLORS.label),
+      });
+    };
+    readColors();
+    // Re-read when the theme attribute changes (e.g. AI theme applied in another tab section).
+    const observer = new MutationObserver(readColors);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "style"] });
+    return () => observer.disconnect();
+  }, []);
+  return colors;
+}
+
 function devicePos(index: number, total: number): [number, number, number] {
   const row = Math.floor(index / 4);
   const inRow = index % 4;
@@ -349,10 +376,11 @@ function DeviceChassis({ device }: { device: LabDevice }) {
 // ---- Interactive RJ45 port ------------------------------------------------
 
 function PortSocket({
-  position, color, selected, connected, flashState, onClick, label,
+  position, color, selected, connected, flashState, onClick, label, labelColor, labelOutline,
 }: {
   position: THREE.Vector3; color: string; selected: boolean; connected: boolean;
   flashState: "ok" | "bad" | null; onClick: () => void; label: string;
+  labelColor: string; labelOutline: string;
 }) {
   const ledRef = useRef<THREE.Mesh>(null);
   const bezelRef = useRef<THREE.Mesh>(null);
@@ -410,7 +438,7 @@ function PortSocket({
         <meshStandardMaterial color="#475569" emissive="#1e293b" />
       </mesh>
       <Billboard position={[0, -0.24, 0.06]}>
-        <Text fontSize={0.11} color="#cbd5e1" anchorX="center" anchorY="middle" outlineWidth={0.006} outlineColor="#020617">
+        <Text fontSize={0.11} color={labelColor} anchorX="center" anchorY="middle" outlineWidth={0.006} outlineColor={labelOutline}>
           {label}
         </Text>
       </Billboard>
@@ -430,6 +458,7 @@ export default function WiringScene({
   const portIndex = usePortIndex(scenario);
   const controls = useRef<OrbitControlsImpl | null>(null);
   const [selected, setSelected] = useState<PortRef | null>(null);
+  const scene = useSceneColors();
 
   const total = scenario.devices.length;
 
@@ -465,7 +494,7 @@ export default function WiringScene({
   }, [made]);
 
   return (
-    <Canvas shadows camera={{ position: [0, 6, 10], fov: 42 }} style={{ background: "#0b1220" }}>
+    <Canvas shadows camera={{ position: [0, 6, 10], fov: 42 }} style={{ background: scene.bg }}>
       <CameraRig center={center} radius={radius} controls={controls} />
       <KeyControls controls={controls} />
       <hemisphereLight args={["#dbeafe", "#0b1220", 0.6]} />
@@ -496,17 +525,17 @@ export default function WiringScene({
       {/* floor + reference grid */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.001, 0]} receiveShadow>
         <planeGeometry args={[60, 60]} />
-        <meshStandardMaterial color="#0d1526" roughness={0.9} />
+        <meshStandardMaterial color={scene.floor} roughness={0.9} />
       </mesh>
       <Grid
         position={[0, 0, 0]}
         args={[60, 60]}
         cellSize={1}
         cellThickness={0.6}
-        cellColor="#1e293b"
+        cellColor={scene.grid}
         sectionSize={4}
         sectionThickness={1}
-        sectionColor="#334155"
+        sectionColor={scene.gridStrong}
         fadeDistance={40}
         fadeStrength={1.5}
         infiniteGrid
@@ -521,13 +550,13 @@ export default function WiringScene({
             <Billboard position={[0, profileOf(d.kind).h + (d.kind === "router" || d.kind === "modem" ? 1.15 : 0.6), 0]}>
               <Text
                 fontSize={0.26}
-                color="#e2e8f0"
+                color={scene.label}
                 anchorX="center"
                 anchorY="middle"
                 maxWidth={CELL_W - 0.4}
                 textAlign="center"
                 outlineWidth={0.012}
-                outlineColor="#020617"
+                outlineColor={scene.bg}
               >
                 {d.name}
               </Text>
@@ -543,6 +572,8 @@ export default function WiringScene({
                   position={local}
                   color={PORT_COLORS[pt.kind] ?? "#475569"}
                   label={pt.label}
+                  labelColor={scene.label}
+                  labelOutline={scene.bg}
                   selected={selected?.device === d.id && selected?.port === pt.id}
                   connected={connectedPorts.has(key)}
                   flashState={flash && !flash.ok && flash.key.includes(key) ? "bad" : null}

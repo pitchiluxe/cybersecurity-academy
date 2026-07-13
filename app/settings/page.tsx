@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { THEMES, applyTheme, getStoredTheme, type ThemeId } from "@/lib/themes";
+import {
+  THEMES, applyTheme, applyCustomTheme, getStoredTheme, getStoredCustomTheme,
+  type ThemeId, type CustomTheme,
+} from "@/lib/themes";
 
 type Provider = "auto" | "openrouter" | "ollama";
 
@@ -28,14 +31,41 @@ export default function SettingsPage() {
   const [pullName, setPullName] = useState("");
   const [pulling, setPulling] = useState<string | null>(null);
   const [theme, setTheme] = useState<ThemeId>("lab");
+  const [customTheme, setCustomTheme] = useState<CustomTheme | null>(null);
+  const [vibe, setVibe] = useState("");
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     setTheme(getStoredTheme());
+    setCustomTheme(getStoredCustomTheme());
   }, []);
 
-  function pickTheme(id: ThemeId) {
+  function pickTheme(id: Exclude<ThemeId, "custom">) {
     applyTheme(id);
     setTheme(id);
+  }
+
+  function pickCustomTheme(t: CustomTheme) {
+    applyCustomTheme(t);
+    setTheme("custom");
+  }
+
+  async function generateTheme() {
+    setGenerating(true);
+    setNotice(null);
+    const res = await fetch("/api/theme/generate", {
+      method: "POST",
+      body: JSON.stringify({ vibe: vibe.trim() }),
+    });
+    const body = await res.json().catch(() => ({}));
+    setGenerating(false);
+    if (!res.ok) {
+      setNotice({ kind: "error", text: body.error ?? "Theme generation failed." });
+      return;
+    }
+    setCustomTheme(body.theme);
+    pickCustomTheme(body.theme);
+    setNotice({ kind: "ok", text: `Applied "${body.theme.label}" — generate again for a different take.` });
   }
 
   async function loadModels() {
@@ -178,6 +208,58 @@ export default function SettingsPage() {
               </button>
             );
           })}
+          {customTheme && (
+            <button
+              type="button"
+              onClick={() => pickCustomTheme(customTheme)}
+              aria-pressed={theme === "custom"}
+              className="rounded-xl border p-3 text-left transition-colors duration-200"
+              style={{
+                cursor: "pointer",
+                borderColor: theme === "custom" ? "var(--accent)" : "var(--border)",
+                background: theme === "custom" ? "var(--accent-soft)" : "var(--surface)",
+              }}
+            >
+              <span aria-hidden="true" className="flex h-10 w-full overflow-hidden rounded-lg border" style={{ borderColor: "var(--border)" }}>
+                <span style={{ flex: 2, background: customTheme.vars["--bg"] }} />
+                <span style={{ flex: 1, background: customTheme.vars["--surface"] }} />
+                <span style={{ flex: 1, background: customTheme.vars["--accent"] }} />
+                <span style={{ flex: 1, background: customTheme.vars["--ink"] }} />
+              </span>
+              <span className="mt-2 flex items-center justify-between gap-2">
+                <span className="text-sm font-bold" style={{ color: "var(--ink)" }}>
+                  ✨ {customTheme.label}
+                </span>
+                {theme === "custom" && (
+                  <span className="font-mono text-[10px] uppercase" style={{ color: "var(--accent)" }}>
+                    Active
+                  </span>
+                )}
+              </span>
+              <span className="mt-1 block text-xs" style={{ color: "var(--ink-muted)" }}>
+                {customTheme.description || "Your AI-generated theme."}
+              </span>
+            </button>
+          )}
+        </div>
+
+        <div className="panel-header mb-1 mt-5">AI theme designer</div>
+        <p className="mb-2 text-xs" style={{ color: "var(--ink-muted)" }}>
+          Describe a mood and the AI designs a full palette — panels, terminals, even the 3D lab room.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <input
+            className="field-input min-w-0 flex-1"
+            value={vibe}
+            onChange={(e) => setVibe(e.target.value)}
+            placeholder='e.g. "cyberpunk neon", "warm coffee shop", "arctic minimal" — or leave blank to be surprised'
+            disabled={generating}
+            aria-label="Theme vibe"
+            onKeyDown={(e) => { if (e.key === "Enter") generateTheme(); }}
+          />
+          <button className="btn-primary" onClick={generateTheme} disabled={generating}>
+            {generating ? "Designing…" : "✨ Generate theme"}
+          </button>
         </div>
       </div>
 
