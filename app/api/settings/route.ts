@@ -15,11 +15,8 @@ export async function GET(request: Request) {
       vercel: !!process.env.VERCEL,
     };
     try {
-      const { getAppSettingsJson, saveAppSettingsJson, countRows } = await import("@/lib/db");
-      await saveAppSettingsJson(JSON.stringify({ probe: Date.now() }));
-      debug.readAfterWrite = (await getAppSettingsJson())?.slice(0, 60) ?? null;
-      debug.userCount = await countRows("users");
-      debug.settingsCount = await countRows("app_settings");
+      const { debugSettingsReads } = await import("@/lib/db");
+      Object.assign(debug, await debugSettingsReads());
     } catch (err) {
       debug.dbError = err instanceof Error ? err.message : String(err);
     }

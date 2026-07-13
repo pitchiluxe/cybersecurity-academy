@@ -208,9 +208,15 @@ export async function saveBootcampChapter(userId: number, skill: string, content
 }
 
 // Temporary diagnostics helper for the hosted settings investigation.
-export async function countRows(table: "users" | "app_settings"): Promise<number> {
-  const rs = await exec(`SELECT count(*) AS n FROM ${table}`);
-  return num(rs.rows[0].n);
+export async function debugSettingsReads(): Promise<Record<string, unknown>> {
+  const all = await exec("SELECT id, typeof(id) AS t, substr(content_json, 1, 40) AS c FROM app_settings");
+  const literal = await exec("SELECT content_json FROM app_settings WHERE id = 1");
+  const param = await exec("SELECT content_json FROM app_settings WHERE id = ?", [1]);
+  return {
+    allRows: all.rows.map((r) => ({ id: r.id, t: r.t, c: r.c })),
+    literalHit: literal.rows.length,
+    paramHit: param.rows.length,
+  };
 }
 
 // App settings live in the DB so they persist on hosts with read-only
