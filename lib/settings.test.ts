@@ -34,7 +34,7 @@ describe("getDefaultSettings", () => {
 });
 
 describe("getSettings under test env", () => {
-  it("returns env-derived defaults without touching the settings file", () => {
-    expect(getSettings()).toEqual(getDefaultSettings());
+  it("returns env-derived defaults without touching the settings stores", async () => {
+    await expect(getSettings()).resolves.toEqual(getDefaultSettings());
   });
 });

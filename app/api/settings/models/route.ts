@@ -39,11 +39,15 @@ async function fetchOllamaModels(baseUrl: string): Promise<{ available: boolean;
   }
 }
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
-  const settings = getSettings();
+  const settings = await getSettings();
   const [openrouter, ollama] = await Promise.all([
     fetchOpenRouterFreeModels(),
     fetchOllamaModels(settings.ollamaBaseUrl),
   ]);
-  return NextResponse.json({ openrouter, ollama }, { status: 200 });
+  // On a hosted deployment the server's "localhost" is not the user's machine —
+  // local Ollama is only usable when the app itself runs on the user's computer.
+  return NextResponse.json({ openrouter, ollama, hosted: !!process.env.VERCEL }, { status: 200 });
 }

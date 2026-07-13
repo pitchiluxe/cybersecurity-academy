@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSettings, saveSettings, isProvider, type AppSettings } from "@/lib/settings";
 
+// Without this, Next statically optimizes the GET at build time — the deployed
+// route then serves a frozen response and rejects PUT with a 405.
+export const dynamic = "force-dynamic";
+
 export async function GET() {
-  return NextResponse.json({ settings: getSettings() }, { status: 200 });
+  return NextResponse.json({ settings: await getSettings() }, { status: 200 });
 }
 
 export async function PUT(request: Request) {
@@ -28,6 +32,6 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Nothing to update." }, { status: 400 });
   }
 
-  const settings = saveSettings(update);
+  const settings = await saveSettings(update);
   return NextResponse.json({ settings }, { status: 200 });
 }

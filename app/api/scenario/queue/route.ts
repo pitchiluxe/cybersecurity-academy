@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   // Local Ollama on CPU generates a few tokens/second — a 20-ticket batch would
   // outlive Node's 300s fetch header timeout, so pin local queues to the minimum.
-  const defaultCount = getSettings().provider === "ollama" ? MIN_QUEUE_TICKETS : randomQueueCount();
+  const defaultCount = (await getSettings()).provider === "ollama" ? MIN_QUEUE_TICKETS : randomQueueCount();
   const count = typeof body?.count === "number" && body.count > 0 ? body.count : defaultCount;
   const topic = typeof body?.topic === "string" && body.topic.trim() !== "" ? body.topic.trim().slice(0, 120) : undefined;
 

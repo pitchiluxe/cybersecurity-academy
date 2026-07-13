@@ -19,6 +19,8 @@ interface Settings {
 interface ModelLists {
   openrouter: string[];
   ollama: { available: boolean; models: string[] };
+  // True on the cloud deployment, where the server cannot reach a user's local Ollama.
+  hosted?: boolean;
 }
 
 const SUGGESTED_PULLS = ["llama3.2:3b", "qwen2.5:7b", "phi3:mini", "gemma2:9b", "mistral:7b", "gpt-oss:20b"];
@@ -321,13 +323,24 @@ export default function SettingsPage() {
               background: settings.provider === "ollama" ? "var(--accent-soft)" : "var(--surface)",
               cursor: "pointer",
             }}
-            onClick={() => save({ provider: "ollama" })}
+            onClick={() => {
+              if (models?.hosted) {
+                setNotice({
+                  kind: "error",
+                  text: "Local Ollama isn't available on the hosted site — it runs on your own computer. Run the app locally (npm run dev) to use it.",
+                });
+                return;
+              }
+              save({ provider: "ollama" });
+            }}
             disabled={saving}
           >
             <div className="text-sm font-bold" style={{ color: "var(--ink)" }}>
               Ollama (local)
-              {models && !models.ollama.available && (
-                <span className="pill pill-warn ml-2">Not running</span>
+              {models?.hosted ? (
+                <span className="pill pill-warn ml-2">Local app only</span>
+              ) : (
+                models && !models.ollama.available && <span className="pill pill-warn ml-2">Not running</span>
               )}
             </div>
             <div className="mt-1 text-xs" style={{ color: "var(--ink-muted)" }}>
@@ -376,7 +389,12 @@ export default function SettingsPage() {
           Models installed at <span className="font-mono">{settings.ollamaBaseUrl}</span>. Current:{" "}
           <span className="font-mono">{settings.ollamaModel || "none"}</span>
         </p>
-        {models && !models.ollama.available ? (
+        {models?.hosted ? (
+          <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
+            This is the hosted site — it can&apos;t reach an Ollama on your computer. Run the app locally
+            (<span className="font-mono">npm run dev</span>) to use local models, no rate limits.
+          </p>
+        ) : models && !models.ollama.available ? (
           <div className="flex flex-wrap items-center gap-3">
             <p className="text-sm" style={{ color: "var(--warn)" }}>
               Ollama isn&apos;t reachable. Start the Ollama app — this page re-checks automatically.
@@ -404,6 +422,8 @@ export default function SettingsPage() {
           </select>
         )}
 
+        {!models?.hosted && (
+          <>
         <div className="panel-header mb-2 mt-5">Pull a new Ollama model</div>
         <div className="mb-2 flex flex-wrap gap-1.5">
           {SUGGESTED_PULLS.map((name) => (
@@ -440,6 +460,8 @@ export default function SettingsPage() {
           <p className="mt-2 font-mono text-xs" style={{ color: "var(--ink-faint)" }}>
             Downloading {pulling} — large models can take several minutes. Keep this page open.
           </p>
+        )}
+          </>
         )}
       </div>
     </main>

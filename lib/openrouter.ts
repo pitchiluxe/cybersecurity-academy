@@ -1,4 +1,4 @@
-import { getSettings, type Provider } from "./settings";
+import { getSettings, type AppSettings, type Provider } from "./settings";
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -82,10 +82,9 @@ export interface CallOptions {
 }
 
 // OpenRouter caps the `models` fallback-routing array at 3 entries.
-function buildOpenRouterRequest(messages: ChatMessage[], maxTokens: number): ProviderRequest {
+function buildOpenRouterRequest(messages: ChatMessage[], maxTokens: number, settings: AppSettings): ProviderRequest {
   const baseUrl = process.env.ANTHROPIC_BASE_URL;
   const token = process.env.ANTHROPIC_AUTH_TOKEN;
-  const settings = getSettings();
   const model = settings.openrouterModel;
 
   if (!token) {
@@ -111,8 +110,7 @@ function buildOpenRouterRequest(messages: ChatMessage[], maxTokens: number): Pro
 // Ollama native chat endpoint, streamed. Local CPU generation can take minutes;
 // a non-streaming request sends zero bytes until it finishes, which trips Node
 // fetch's 300s header timeout. Streaming NDJSON keeps the connection alive.
-function buildOllamaRequest(messages: ChatMessage[], maxTokens: number): ProviderRequest {
-  const settings = getSettings();
+function buildOllamaRequest(messages: ChatMessage[], maxTokens: number, settings: AppSettings): ProviderRequest {
   if (!settings.ollamaModel) {
     throw new OpenRouterRequestError(500, "No Ollama model selected. Pick one in Settings.");
   }
@@ -159,7 +157,8 @@ export async function readOllamaStream(body: AsyncIterable<Uint8Array>): Promise
 // Named for its original backend; now routes to OpenRouter or local Ollama
 // depending on saved settings.
 export async function callOpenRouter(messages: ChatMessage[], options: CallOptions = {}): Promise<string> {
-  const provider = getSettings().provider;
+  const settings = await getSettings();
+  const provider = settings.provider;
   const maxTokens = options.maxTokens ?? 4096;
 
   // "auto" = best free cloud models first, local Ollama as the safety net.
@@ -169,7 +168,7 @@ export async function callOpenRouter(messages: ChatMessage[], options: CallOptio
 
   for (const p of chain) {
     try {
-      return await callProvider(p, messages, maxTokens);
+      return await callProvider(p, messages, maxTokens, settings);
     } catch (err) {
       if (err instanceof MissingApiKeyError || err instanceof OpenRouterRequestError) {
         lastError = err;
@@ -189,9 +188,11 @@ export async function callOpenRouter(messages: ChatMessage[], options: CallOptio
 async function callProvider(
   provider: "openrouter" | "ollama",
   messages: ChatMessage[],
-  maxTokens: number
+  maxTokens: number,
+  settings: AppSettings
 ): Promise<string> {
-  const request = provider === "ollama" ? buildOllamaRequest(messages, maxTokens) : buildOpenRouterRequest(messages, maxTokens);
+  const request =
+    provider === "ollama" ? buildOllamaRequest(messages, maxTokens, settings) : buildOpenRouterRequest(messages, maxTokens, settings);
 
   let lastError: OpenRouterRequestError | null = null;
 

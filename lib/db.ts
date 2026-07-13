@@ -66,6 +66,10 @@ const SCHEMA = `
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE (user_id, skill)
   );
+  CREATE TABLE IF NOT EXISTS app_settings (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    content_json TEXT NOT NULL
+  );
   CREATE TABLE IF NOT EXISTS bootcamp_enrollments (
     user_id INTEGER NOT NULL,
     camp TEXT NOT NULL,
@@ -199,6 +203,20 @@ export async function saveBootcampChapter(userId: number, skill: string, content
   await exec("INSERT INTO bootcamp_chapters (user_id, skill, content_json) VALUES (?, ?, ?) ON CONFLICT(user_id, skill) DO NOTHING", [
     userId,
     skill,
+    contentJson,
+  ]);
+}
+
+// App settings live in the DB so they persist on hosts with read-only
+// filesystems (Vercel); the singleton row keeps it one source of truth.
+export async function getAppSettingsJson(): Promise<string | undefined> {
+  const rs = await exec("SELECT content_json FROM app_settings WHERE id = 1");
+  const r = rs.rows[0];
+  return r ? String(r.content_json) : undefined;
+}
+
+export async function saveAppSettingsJson(contentJson: string): Promise<void> {
+  await exec("INSERT INTO app_settings (id, content_json) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET content_json = excluded.content_json", [
     contentJson,
   ]);
 }

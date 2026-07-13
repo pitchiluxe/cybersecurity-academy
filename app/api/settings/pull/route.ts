@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Enter a valid Ollama model name, e.g. llama3.2:3b" }, { status: 400 });
   }
 
-  const baseUrl = getSettings().ollamaBaseUrl.replace(/\/$/, "");
+  const baseUrl = (await getSettings()).ollamaBaseUrl.replace(/\/$/, "");
 
   try {
     // stream:false blocks until the pull finishes (can take minutes for big models).
