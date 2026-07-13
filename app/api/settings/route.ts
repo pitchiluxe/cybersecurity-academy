@@ -5,13 +5,8 @@ import { getSettings, saveSettings, isProvider, type AppSettings } from "@/lib/s
 // route then serves a frozen response and rejects PUT with a 405.
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
-  const settings = await getSettings();
-  if (new URL(request.url).searchParams.get("debug") === "1") {
-    const { lastSettingsReadError } = await import("@/lib/settings");
-    return NextResponse.json({ settings, debug: { lastSettingsReadError } }, { status: 200 });
-  }
-  return NextResponse.json({ settings }, { status: 200 });
+export async function GET() {
+  return NextResponse.json({ settings: await getSettings() }, { status: 200 });
 }
 
 export async function PUT(request: Request) {
