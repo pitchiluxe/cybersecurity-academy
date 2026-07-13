@@ -17,9 +17,12 @@ const LAB_ENGINES: LabEngine[] = ["wiring", "fortigate", "router"];
 export const MIN_CATALOG_LABS = 8;
 export const MAX_CATALOG_LABS = 14;
 
-export function buildLabCatalogMessages(): ChatMessage[] {
+export function buildLabCatalogMessages(topic?: string): ChatMessage[] {
   const count = MIN_CATALOG_LABS + Math.floor(Math.random() * (MAX_CATALOG_LABS - MIN_CATALOG_LABS + 1));
-  const system = `You are the lab dispatcher for an IT help-desk training platform. Invent ${count} distinct hands-on lab jobs a field technician could be sent on today.
+  const topicLine = topic
+    ? `\nThe trainee asked for jobs themed around: "${topic}". Bias industries, failure modes and briefs toward that theme.`
+    : "";
+  const system = `You are the lab dispatcher for an IT help-desk training platform. Invent ${count} distinct hands-on lab jobs a field technician could be sent on today.${topicLine}
 Each lab uses one of three engines:
 - "wiring": physical network cabling in 3D (modem, router, switch, patch panel, PC, AP, firewall). Jobs: buildouts, moves, outages, rollouts.
 - "fortigate": rack + cable a FortiGate, then configure it in the FortiOS CLI. Jobs: deployments, policies, NAT, web filtering, VPN, port-forwards.

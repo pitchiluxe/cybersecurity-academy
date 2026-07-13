@@ -110,7 +110,7 @@ export default function ContactPage() {
               />
               <div>
                 <p className="font-bold" style={{ color: "var(--ink)" }}>Erick Omari</p>
-                <p className="text-xs font-medium" style={{ color: "var(--accent)" }}>Builder · TechBench Academy</p>
+                <p className="text-xs font-medium" style={{ color: "var(--accent)" }}>Builder · Cybersecurity Academy</p>
               </div>
             </div>
             <div className="mt-6 flex flex-col gap-4 text-sm">
@@ -126,7 +126,7 @@ export default function ContactPage() {
               </div>
               <div>
                 <p className="font-mono text-[10px] uppercase tracking-wider" style={{ color: "var(--ink-faint)" }}>Project</p>
-                <p style={{ color: "var(--ink-muted)" }}>TechBench Academy — IT support training lab</p>
+                <p style={{ color: "var(--ink-muted)" }}>Cybersecurity Academy — IT support training lab</p>
               </div>
             </div>
           </div>

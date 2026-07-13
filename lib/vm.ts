@@ -106,6 +106,29 @@ export function parseVmSpec(text: string): VmSpec {
   };
 }
 
+/**
+ * One-shot coaching for the trainee inside the remote-machine terminal: looks
+ * at the machine, the symptoms so far, and suggests the next diagnostic or fix
+ * command — guiding toward the fault without naming it outright.
+ */
+export function buildVmAssistMessages(seed: ScenarioSeed, spec: VmSpec, history: VmExchange[]): ChatMessage[] {
+  const recent = history.slice(-4);
+  const consoleBlock =
+    recent.length > 0
+      ? `Recent terminal activity (most recent last):\n${recent.map((h) => `> ${h.command}\n${h.output.slice(0, 300)}`).join("\n")}`
+      : "The trainee has not run any commands yet.";
+  const system = `You are a senior IT technician coaching a trainee who is remotely logged into a user's machine to troubleshoot it.
+Machine: hostname ${spec.hostname}, OS ${spec.os}, logged in as ${spec.username} with admin rights.
+The user reported: ${seed.openingMessage}
+The hidden root cause (the trainee must discover it themselves — never name it outright): ${seed.rootCause}
+${consoleBlock}
+Coach the next move: one or two sentences of diagnostic reasoning based on what they've seen so far, then the exact ${spec.os}-appropriate command to type next. Early on suggest investigation commands; only steer toward the fix once the evidence on screen points to the cause. Plain text only, no markdown, under 60 words.`;
+  return [
+    { role: "system", content: system },
+    { role: "user", content: "What should I try next?" },
+  ];
+}
+
 export function buildVmExecMessages(
   seed: ScenarioSeed,
   spec: VmSpec,

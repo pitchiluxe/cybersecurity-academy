@@ -10,8 +10,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Not logged in." }, { status: 401 });
   }
 
+  const body = await request.json().catch(() => ({}));
+  const topic = typeof body?.topic === "string" && body.topic.trim() !== "" ? body.topic.trim().slice(0, 120) : undefined;
+
   try {
-    const text = await callOpenRouter(buildLabCatalogMessages());
+    const text = await callOpenRouter(buildLabCatalogMessages(topic));
     const labs = parseLabCatalog(text);
     return NextResponse.json({ labs, fallback: false }, { status: 200 });
   } catch {

@@ -66,6 +66,7 @@ export function NavBar() {
   const navLinks: { href: string; label: string; active: boolean }[] = [
     { href: "/queue", label: "Queue", active: pathname === "/queue" },
     { href: "/courses", label: "Courses", active: !!pathname?.startsWith("/courses") },
+    { href: "/bootcamp", label: "Bootcamp", active: !!pathname?.startsWith("/bootcamp") },
     { href: "/labs", label: "Labs", active: !!pathname?.startsWith("/labs") },
     { href: "/profile", label: "Profile", active: pathname === "/profile" },
     { href: "/contact", label: "Contact", active: pathname === "/contact" },
@@ -77,17 +78,12 @@ export function NavBar() {
     <header className="border-b" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
         <Link href="/" className="flex min-w-0 items-center gap-2.5">
-          <span className="brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 12a9 9 0 0 1 18 0" />
-              <path d="M3 12v4a2 2 0 0 0 2 2h1a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1H3z" />
-              <path d="M21 12v4a2 2 0 0 1-2 2h-1a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h3z" />
-              <path d="M19 18v1a2 2 0 0 1-2 2h-4" />
-            </svg>
+          <span className="brand-mark font-display text-[13px] font-black tracking-tight" aria-hidden="true">
+            CA
           </span>
           <span className="flex min-w-0 flex-col leading-tight">
             <span className="font-display text-sm font-bold" style={{ color: "var(--ink)" }}>
-              TechBench Academy
+              Cybersecurity Academy
             </span>
             <span className="hidden font-mono text-[10px] uppercase tracking-widest sm:block" style={{ color: "var(--ink-faint)" }}>
               IT training lab

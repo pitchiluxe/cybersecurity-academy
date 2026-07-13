@@ -58,6 +58,14 @@ const SCHEMA = `
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE (user_id, track)
   );
+  CREATE TABLE IF NOT EXISTS bootcamp_chapters (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    skill TEXT NOT NULL,
+    content_json TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (user_id, skill)
+  );
 `;
 
 function getClient(): Client {
@@ -167,6 +175,21 @@ export async function saveCourse(userId: number, track: string, contentJson: str
   return row!.id;
 }
 
+export async function getBootcampChapterRow(userId: number, skill: string): Promise<{ id: number; content_json: string } | undefined> {
+  const rs = await exec("SELECT id, content_json FROM bootcamp_chapters WHERE user_id = ? AND skill = ?", [userId, skill]);
+  const r = rs.rows[0];
+  return r ? { id: num(r.id), content_json: String(r.content_json) } : undefined;
+}
+
+// Same first-write-wins race handling as saveCourse.
+export async function saveBootcampChapter(userId: number, skill: string, contentJson: string): Promise<void> {
+  await exec("INSERT INTO bootcamp_chapters (user_id, skill, content_json) VALUES (?, ?, ?) ON CONFLICT(user_id, skill) DO NOTHING", [
+    userId,
+    skill,
+    contentJson,
+  ]);
+}
+
 export async function getExamRow(userId: number, track: string): Promise<{ id: number; content_json: string } | undefined> {
   const rs = await exec("SELECT id, content_json FROM exams WHERE user_id = ? AND track = ?", [userId, track]);
   const r = rs.rows[0];
@@ -188,6 +211,13 @@ export async function updateExamJson(userId: number, track: string, contentJson:
 
 export async function deleteExam(userId: number, track: string): Promise<void> {
   await exec("DELETE FROM exams WHERE user_id = ? AND track = ?", [userId, track]);
+}
+
+export async function deleteCourse(userId: number, track: string): Promise<void> {
+  const row = await getCourseRow(userId, track);
+  if (!row) return;
+  await exec("DELETE FROM module_progress WHERE course_id = ?", [row.id]);
+  await exec("DELETE FROM courses WHERE id = ?", [row.id]);
 }
 
 export async function getPassedModuleIndexes(courseId: number): Promise<number[]> {

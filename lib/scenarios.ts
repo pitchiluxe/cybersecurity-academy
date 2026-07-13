@@ -83,9 +83,16 @@ export function randomQueueCount(): number {
   return MIN_QUEUE_TICKETS + Math.floor(Math.random() * (MAX_QUEUE_TICKETS - MIN_QUEUE_TICKETS + 1));
 }
 
-export function buildQueueMessages(count: number, varietySeed: number = Math.floor(Math.random() * 1_000_000)): ChatMessage[] {
+export function buildQueueMessages(
+  count: number,
+  varietySeed: number = Math.floor(Math.random() * 1_000_000),
+  topic?: string
+): ChatMessage[] {
   const categoryList = SCENARIO_CATEGORIES.map((c) => `"${c.id}" (${c.label})`).join(", ");
-  const system = `You are generating a queue of ${count} training tickets for an IT helpdesk trainee.
+  const topicLine = topic
+    ? `\nThe trainee asked for tickets themed around: "${topic}". Bias personas, environments and root causes toward that theme while keeping category ids valid.`
+    : "";
+  const system = `You are generating a queue of ${count} training tickets for an IT helpdesk trainee.${topicLine}
 The available categories are: ${categoryList}.
 Invent ${count} plausible, specific, non-generic end-user personas and problems, spread roughly evenly across all ${SCENARIO_CATEGORIES.length} categories — do not use the same category more than twice. Make up a name, department, device/OS, and a concrete root cause a real technician could diagnose from symptoms alone for each one.
 Variety seed: ${varietySeed}. Every batch must feel different: vary names across cultures, vary departments and industries, vary device brands and OS versions, and pick root causes beyond the obvious clichés (not always "driver update broke it"). Include real-world messiness — vague users, secondhand reports, problems that started after office moves, updates, or new equipment.

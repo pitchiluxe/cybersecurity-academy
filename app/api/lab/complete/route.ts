@@ -7,6 +7,7 @@ import type { ScenarioCategory } from "@/lib/types";
 const KIND_CATEGORY: Record<string, ScenarioCategory> = {
   wiring: "network",
   fortigate: "firewall",
+  bootcamp: "network",
   router: "network",
 };
 

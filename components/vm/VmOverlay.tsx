@@ -30,6 +30,7 @@ export function VmOverlay({
   const [command, setCommand] = useState("");
   const [running, setRunning] = useState(false);
   const [resolved, setResolved] = useState(false);
+  const [assisting, setAssisting] = useState(false);
   const terminalEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -90,6 +91,19 @@ export function VmOverlay({
       setResolved(true);
       onResolved();
     }
+  }
+
+  async function askAssist() {
+    if (!spec || assisting || resolved) return;
+    setAssisting(true);
+    const res = await fetch("/api/vm/assist", {
+      method: "POST",
+      body: JSON.stringify({ seed, spec, history }),
+    });
+    const body = await res.json().catch(() => ({}));
+    setAssisting(false);
+    const output = res.ok ? `🤖 ${body.advice}` : `[assist unavailable] ${body.error ?? "try again"}`;
+    setHistory((prev) => [...prev, { command: "(AI tutor)", output }]);
   }
 
   return (
@@ -195,8 +209,18 @@ export function VmOverlay({
                 className="mx-auto flex h-full max-w-3xl flex-col rounded-xl border"
                 style={{ borderColor: "#1e293b", background: "#020617" }}
               >
-                <div className="border-b px-3 py-1.5 font-mono text-[11px]" style={{ borderColor: "#1e293b", color: "#64748b" }}>
-                  Terminal — {spec.hostname}
+                <div className="flex items-center justify-between border-b px-3 py-1.5 font-mono text-[11px]" style={{ borderColor: "#1e293b", color: "#64748b" }}>
+                  <span>Terminal — {spec.hostname}</span>
+                  <button
+                    type="button"
+                    onClick={askAssist}
+                    disabled={assisting || resolved}
+                    className="cursor-pointer rounded border px-2 py-0.5 font-mono text-[11px] disabled:opacity-40"
+                    style={{ borderColor: "#334155", color: "#38bdf8" }}
+                    title="Ask the AI tutor what command to try next."
+                  >
+                    {assisting ? "thinking…" : "🤖 AI tutor — what next?"}
+                  </button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-3 font-mono text-[13px] leading-relaxed" style={{ color: "#cbd5e1" }}>
                   <div style={{ color: "#64748b" }}>Connected. Type commands to troubleshoot this machine.</div>

@@ -3,7 +3,7 @@ import { getCookieValue, verifySessionToken, SESSION_COOKIE_NAME } from "@/lib/s
 import { callOpenRouter, MissingApiKeyError, OpenRouterRequestError } from "@/lib/openrouter";
 import { ParseError } from "@/lib/parsing";
 import { buildCourseMessages, isTrackId, parseCourse, stripAnswers, type Course } from "@/lib/courses";
-import { getCourseRow, getPassedModuleIndexes, hasCertificate, saveCourse } from "@/lib/db";
+import { deleteCourse, getCourseRow, getPassedModuleIndexes, hasCertificate, saveCourse } from "@/lib/db";
 
 export async function POST(request: Request) {
   const token = getCookieValue(request, SESSION_COOKIE_NAME);
@@ -16,6 +16,12 @@ export async function POST(request: Request) {
   const track = body?.track;
   if (typeof track !== "string" || !isTrackId(track)) {
     return NextResponse.json({ error: "Unknown track" }, { status: 400 });
+  }
+  const focus = typeof body?.focus === "string" && body.focus.trim() !== "" ? body.focus.trim().slice(0, 120) : undefined;
+
+  // fresh=true regenerates from scratch (and resets module progress with it).
+  if (body?.fresh === true) {
+    await deleteCourse(session.userId, track);
   }
 
   const cached = await getCourseRow(session.userId, track);
@@ -31,7 +37,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const messages = buildCourseMessages(track);
+  const messages = buildCourseMessages(track, focus);
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {

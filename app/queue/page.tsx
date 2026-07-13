@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getCategoryMeta } from "@/lib/scenarios";
 import { ScenarioCard } from "@/components/ScenarioCard";
 import type { TicketPreview } from "@/lib/types";
@@ -27,31 +27,31 @@ export default function Home() {
   const [tickets, setTickets] = useState<TicketPreview[]>([]);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [usingFallback, setUsingFallback] = useState(false);
+  const [topic, setTopic] = useState("");
+
+  // No count — the server rolls a random 10-20 ticket queue each load.
+  const loadQueue = useCallback(async (requestTopic?: string) => {
+    setLoadState("loading");
+    const res = await fetch("/api/scenario/queue", {
+      method: "POST",
+      body: JSON.stringify(requestTopic ? { topic: requestTopic } : {}),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      console.error("scenario/queue failed:", body.error);
+      setErrorMessage(queueErrorMessage(String(body.error ?? "")));
+      setLoadState("error");
+      return;
+    }
+    const body = await res.json();
+    setTickets(body.tickets);
+    setUsingFallback(Boolean(body.fallback));
+    setLoadState("ready");
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    async function loadQueue() {
-      setLoadState("loading");
-      // No count — the server rolls a random 10-20 ticket queue each load.
-      const res = await fetch("/api/scenario/queue", { method: "POST", body: JSON.stringify({}) });
-      if (cancelled) return;
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        console.error("scenario/queue failed:", body.error);
-        setErrorMessage(queueErrorMessage(String(body.error ?? "")));
-        setLoadState("error");
-        return;
-      }
-      const body = await res.json();
-      setTickets(body.tickets);
-      setUsingFallback(Boolean(body.fallback));
-      setLoadState("ready");
-    }
     loadQueue();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  }, [loadQueue]);
 
   return (
     <main className="mx-auto max-w-5xl p-6 sm:p-8">
@@ -67,6 +67,24 @@ export default function Home() {
             You&apos;re the technician on shift. Accept a ticket, question the end-user, run remote
             diagnostics, fix the fault, then close with resolution notes for grading.
           </p>
+          <div className="mt-3 flex max-w-xl flex-wrap gap-2">
+            <input
+              className="field-input min-w-0 flex-1"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              placeholder='Optional theme, e.g. "VPN problems" or "hospital network" — blank for a random mix'
+              disabled={loadState === "loading"}
+              aria-label="Ticket queue theme"
+              onKeyDown={(e) => { if (e.key === "Enter") loadQueue(topic.trim() || undefined); }}
+            />
+            <button
+              className="btn-primary"
+              onClick={() => loadQueue(topic.trim() || undefined)}
+              disabled={loadState === "loading"}
+            >
+              {loadState === "loading" ? "Generating…" : "✨ AI generate queue"}
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

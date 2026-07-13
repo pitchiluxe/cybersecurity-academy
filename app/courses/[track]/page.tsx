@@ -63,6 +63,9 @@ export default function CourseTrackPage() {
   const [practiceBusy, setPracticeBusy] = useState(false);
   const [practiceError, setPracticeError] = useState<string | null>(null);
 
+  const [regenFocus, setRegenFocus] = useState("");
+  const [regenBusy, setRegenBusy] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
     fetch("/api/course/generate", { method: "POST", body: JSON.stringify({ track }) })
@@ -84,6 +87,29 @@ export default function CourseTrackPage() {
       cancelled = true;
     };
   }, [track]);
+
+  async function regenerateCourse() {
+    if (regenBusy) return;
+    if (!window.confirm("Regenerate this course with AI? Your module quiz progress for this track will reset.")) return;
+    setRegenBusy(true);
+    setLoadError(null);
+    const res = await fetch("/api/course/generate", {
+      method: "POST",
+      body: JSON.stringify({ track, fresh: true, focus: regenFocus.trim() || undefined }),
+    });
+    const body = await res.json().catch(() => ({}));
+    setRegenBusy(false);
+    if (!res.ok) {
+      setLoadError(body.error ?? "Could not regenerate the course.");
+      return;
+    }
+    setCourse(body.course);
+    setPassed(new Set<number>(body.passedModules));
+    setCertified(body.certified);
+    setActive(0);
+    setAnswers({});
+    setQuizResult(null);
+  }
 
   useEffect(() => {
     tutorEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -363,6 +389,28 @@ export default function CourseTrackPage() {
             <Link href={`/courses/${track}/exam`} className="btn-primary mt-3 inline-block">
               Take the final exam →
             </Link>
+
+            <hr className="my-6" style={{ borderColor: "var(--border)" }} />
+            <h3 className="font-display text-base font-bold" style={{ color: "var(--ink)" }}>
+              AI course generator
+            </h3>
+            <p className="mt-1 text-sm" style={{ color: "var(--ink-muted)" }}>
+              Not feeling this version? Have the AI write a brand-new course for this track — optionally
+              focused on what you want to drill. Quiz progress for this track resets.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <input
+                className="field-input min-w-0 flex-1"
+                value={regenFocus}
+                onChange={(e) => setRegenFocus(e.target.value)}
+                placeholder='Optional focus, e.g. "subnetting drills" or "wireless security"'
+                disabled={regenBusy}
+                aria-label="Course focus"
+              />
+              <button className="btn-ghost" onClick={regenerateCourse} disabled={regenBusy}>
+                {regenBusy ? "Rewriting course…" : "✨ Regenerate course"}
+              </button>
+            </div>
           </article>
 
           <aside className={`panel flex h-[70vh] flex-col p-4 ${tutorOpen ? "" : "hidden lg:flex"}`}>

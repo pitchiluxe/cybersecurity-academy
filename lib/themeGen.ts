@@ -6,7 +6,7 @@ import { THEME_VARS, type CustomTheme } from "./themes";
 const CSS_COLOR_RE = /^(#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})|rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*(,\s*(0|1|0?\.\d+)\s*)?\))$/i;
 
 export function buildThemeMessages(vibe: string): ChatMessage[] {
-  const system = `You are a senior UI designer creating a color theme for "TechBench Academy", an IT-support training web app (panels, pills, terminals, a 3D wiring lab).
+  const system = `You are a senior UI designer creating a color theme for "Cybersecurity Academy", an IT-support training web app (panels, pills, terminals, a 3D wiring lab).
 The user wants a theme with this vibe: "${vibe}".
 Design a cohesive, accessible palette:
 - --ink on --bg and on --surface must meet WCAG AA contrast (4.5:1). --ink-muted must still be readable on --surface.

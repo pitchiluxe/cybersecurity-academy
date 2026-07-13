@@ -140,10 +140,13 @@ export function makeCertCode(track: TrackId): string {
   return `HDC-${getTrack(track).short}-${randomBytes(3).toString("hex").toUpperCase()}`;
 }
 
-export function buildCourseMessages(track: TrackId): ChatMessage[] {
+export function buildCourseMessages(track: TrackId, focus?: string): ChatMessage[] {
   const meta = getTrack(track);
+  const focusLine = focus
+    ? `\nThe learner asked to emphasize: "${focus}". Bias module topics and examples toward it while still covering the certification's core objectives.`
+    : "";
   const system = `You are an expert IT instructor writing a self-paced mini-course preparing a helpdesk trainee for the ${meta.title} certification.
-Focus: ${meta.description}
+Focus: ${meta.description}${focusLine}
 Write 4 to 6 modules. Each module has a substantial lesson (400-700 words of plain text — paragraphs separated by blank lines, simple "- " bullet lists allowed, no markdown headings or code fences) grounded in real-world troubleshooting the trainee will face on the job, followed by a 5-question multiple-choice quiz.
 Respond with ONLY a JSON object, no prose, no markdown fences, matching exactly this shape:
 {

@@ -30,8 +30,9 @@ export async function POST(request: Request) {
   // outlive Node's 300s fetch header timeout, so pin local queues to the minimum.
   const defaultCount = getSettings().provider === "ollama" ? MIN_QUEUE_TICKETS : randomQueueCount();
   const count = typeof body?.count === "number" && body.count > 0 ? body.count : defaultCount;
+  const topic = typeof body?.topic === "string" && body.topic.trim() !== "" ? body.topic.trim().slice(0, 120) : undefined;
 
-  const messages = buildQueueMessages(count);
+  const messages = buildQueueMessages(count, undefined, topic);
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {

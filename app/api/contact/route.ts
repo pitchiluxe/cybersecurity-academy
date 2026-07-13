@@ -33,14 +33,14 @@ export async function POST(request: Request) {
   try {
     // Notify the site owner.
     await transporter.sendMail({
-      from: `"TechBench Academy" <${user}>`,
+      from: `"Cybersecurity Academy" <${user}>`,
       to: TO_ADDRESS,
       replyTo: email,
-      subject: `[TechBench Academy] ${safeSubject} — from ${name}`,
+      subject: `[Cybersecurity Academy] ${safeSubject} — from ${name}`,
       html: `
         <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; background: #0D1421; color: #E2E8F0; border-radius: 12px; overflow: hidden; border: 1px solid #1A2540;">
           <div style="background: linear-gradient(135deg, #6366F1, #8B5CF6); padding: 24px 32px;">
-            <h1 style="margin: 0; font-size: 20px; font-weight: 800; color: #fff;">New TechBench Academy message</h1>
+            <h1 style="margin: 0; font-size: 20px; font-weight: 800; color: #fff;">New Cybersecurity Academy message</h1>
             <p style="margin: 4px 0 0; color: rgba(255,255,255,0.8); font-size: 13px;">${when}</p>
           </div>
           <div style="padding: 28px 32px;">
@@ -56,17 +56,17 @@ export async function POST(request: Request) {
 
     // Auto-reply to the sender.
     await transporter.sendMail({
-      from: `"Erick Omari — TechBench Academy" <${user}>`,
+      from: `"Erick Omari — Cybersecurity Academy" <${user}>`,
       to: email,
       subject: "Got your message — I'll be in touch soon",
       html: `
         <div style="font-family: system-ui, sans-serif; max-width: 560px; margin: 0 auto; background: #0D1421; color: #E2E8F0; border-radius: 12px; overflow: hidden; border: 1px solid #1A2540;">
           <div style="background: linear-gradient(135deg, #6366F1, #8B5CF6); padding: 22px 32px;">
-            <h1 style="margin: 0; font-size: 19px; font-weight: 800; color: #fff;">TechBench Academy</h1>
+            <h1 style="margin: 0; font-size: 19px; font-weight: 800; color: #fff;">Cybersecurity Academy</h1>
           </div>
           <div style="padding: 26px 32px;">
             <p style="margin: 0 0 14px; font-size: 15px; line-height: 1.7;">Hey <strong>${name}</strong>,</p>
-            <p style="margin: 0 0 14px; font-size: 15px; line-height: 1.7; color:#94A3B8;">Thanks for reaching out through TechBench Academy. I got your message and will get back to you as soon as possible.</p>
+            <p style="margin: 0 0 14px; font-size: 15px; line-height: 1.7; color:#94A3B8;">Thanks for reaching out through Cybersecurity Academy. I got your message and will get back to you as soon as possible.</p>
             <div style="background:#152033;border:1px solid #1A2540;border-radius:8px;padding:14px 18px;margin:18px 0;font-size:13px;color:#64748B;font-style:italic;line-height:1.6;">"${message.slice(0, 200)}${message.length > 200 ? "…" : ""}"</div>
             <p style="margin: 0; font-size: 14px; color:#94A3B8;">— Erick Omari</p>
           </div>

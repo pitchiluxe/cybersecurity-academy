@@ -45,7 +45,7 @@ export default function RegisterPage() {
           </span>
           <div>
             <div className="font-display text-sm font-bold" style={{ color: "var(--ink)" }}>
-              TechBench Academy
+              Cybersecurity Academy
             </div>
             <div className="font-mono text-[10px] uppercase tracking-widest" style={{ color: "var(--ink-faint)" }}>
               Trainee enrollment

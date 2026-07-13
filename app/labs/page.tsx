@@ -16,8 +16,9 @@ export default function LabsPage() {
   const [labs, setLabs] = useState<LabBrief[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [topic, setTopic] = useState("");
 
-  const loadCatalog = useCallback(async (force: boolean) => {
+  const loadCatalog = useCallback(async (force: boolean, requestTopic?: string) => {
     setError(null);
     if (!force) {
       try {
@@ -32,7 +33,10 @@ export default function LabsPage() {
     }
     setRefreshing(true);
     try {
-      const res = await fetch("/api/lab/list", { method: "POST" });
+      const res = await fetch("/api/lab/list", {
+        method: "POST",
+        body: JSON.stringify(requestTopic ? { topic: requestTopic } : {}),
+      });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error ?? "Could not load the lab board.");
       sessionStorage.setItem(CATALOG_KEY, JSON.stringify(body.labs));
@@ -67,14 +71,25 @@ export default function LabsPage() {
             Today&apos;s dispatched jobs — 3D equipment you can actually touch. Lab scores count toward your certification lab requirements.
           </p>
         </div>
-        <button
-          type="button"
-          className="btn-ghost text-sm"
-          onClick={() => loadCatalog(true)}
-          disabled={refreshing}
-        >
-          {refreshing ? "Dispatching…" : "New job board"}
-        </button>
+        <div className="flex w-full max-w-md flex-wrap gap-2 sm:w-auto">
+          <input
+            className="field-input min-w-0 flex-1"
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            placeholder='Optional theme, e.g. "VLANs" or "hotel Wi-Fi"'
+            disabled={refreshing}
+            aria-label="Lab board theme"
+            onKeyDown={(e) => { if (e.key === "Enter") loadCatalog(true, topic.trim() || undefined); }}
+          />
+          <button
+            type="button"
+            className="btn-primary text-sm"
+            onClick={() => loadCatalog(true, topic.trim() || undefined)}
+            disabled={refreshing}
+          >
+            {refreshing ? "Dispatching…" : "✨ New job board"}
+          </button>
+        </div>
       </div>
 
       {error && (
