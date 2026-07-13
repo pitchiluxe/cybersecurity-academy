@@ -38,9 +38,10 @@ export async function checkAndIssueCertificate(userId: number, track: TrackId): 
 export const BOOTCAMP_CERT_PREFIX = "bootcamp-";
 
 /**
- * A bootcamp certificate is earned when every chapter quiz in the camp has
- * been passed (≥ BOOTCAMP_PASS_SCORE). Returns the newly issued cert code, or
- * null when not yet earned / already issued.
+ * A bootcamp certificate is earned only when ALL material is done: every
+ * chapter quiz passed (≥ BOOTCAMP_PASS_SCORE) AND every chapter's VM lab
+ * resolved. Returns the newly issued cert code, or null when not yet earned /
+ * already issued.
  */
 export async function checkAndIssueBootcampCertificate(userId: number, camp: string): Promise<string | null> {
   const meta = getBootcamp(camp);
@@ -50,8 +51,11 @@ export async function checkAndIssueBootcampCertificate(userId: number, camp: str
 
   const skills = skillsForBootcamp(camp);
   const progress = await getBootcampProgress(userId, skills.map((s) => s.id));
-  const passedAll = skills.every((s) => (progress.find((p) => p.skill === s.id)?.quiz_score ?? 0) >= BOOTCAMP_PASS_SCORE);
-  if (!passedAll) return null;
+  const doneAll = skills.every((s) => {
+    const p = progress.find((row) => row.skill === s.id);
+    return (p?.quiz_score ?? 0) >= BOOTCAMP_PASS_SCORE && (p?.lab_done ?? 0) === 1;
+  });
+  if (!doneAll) return null;
 
   const code = `BC-${camp.toUpperCase()}-${randomBytes(3).toString("hex").toUpperCase()}`;
   await insertCertificate(userId, track, code);

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCookieValue, verifySessionToken, SESSION_COOKIE_NAME } from "@/lib/session";
 import { getBootcampSkill, isBootcampSkillId } from "@/lib/bootcamp";
 import { markBootcampLabDone, recordTicketResult } from "@/lib/db";
+import { checkAndIssueBootcampCertificate } from "@/lib/certification";
 
 // Called when the trainee genuinely resolves a bootcamp VM lab's hidden fault.
 export async function POST(request: Request) {
@@ -17,9 +18,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unknown bootcamp skill" }, { status: 400 });
   }
 
+  const skill = getBootcampSkill(skillId)!;
   await markBootcampLabDone(session.userId, skillId);
   // Bootcamp labs also count toward the regular cert-lab requirements.
-  await recordTicketResult(session.userId, getBootcampSkill(skillId)!.labSeed.category, 100);
+  await recordTicketResult(session.userId, skill.labSeed.category, 100);
+  // This lab may have been the last piece of the camp's material.
+  const newCertificate = await checkAndIssueBootcampCertificate(session.userId, skill.camp);
 
-  return NextResponse.json({ recorded: true }, { status: 200 });
+  return NextResponse.json({ recorded: true, newCertificate }, { status: 200 });
 }

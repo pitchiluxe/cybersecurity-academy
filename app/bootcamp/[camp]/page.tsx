@@ -73,6 +73,7 @@ export default function BootcampCampPage() {
   const camp = getBootcamp(campId)!;
   const skills = skillsForBootcamp(campId);
   const passedCount = skills.filter((s) => (progress[s.id]?.quiz_score ?? 0) >= BOOTCAMP_PASS_SCORE).length;
+  const labsDoneCount = skills.filter((s) => !!progress[s.id]?.lab_done).length;
 
   async function openChapter(skill: BootcampSkill) {
     if (chapters[skill.id] || loading) return;
@@ -134,7 +135,15 @@ export default function BootcampCampPage() {
       ...prev,
       [skill.id]: { skill: skill.id, quiz_score: prev[skill.id]?.quiz_score ?? 0, lab_done: 1 },
     }));
-    fetch("/api/bootcamp/lab", { method: "POST", body: JSON.stringify({ skill: skill.id }) }).catch(() => {});
+    // The lab may complete the camp's material and earn the certificate.
+    fetch("/api/bootcamp/lab", { method: "POST", body: JSON.stringify({ skill: skill.id }) })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body) => {
+        if (body?.newCertificate) {
+          setCertificate({ code: body.newCertificate, issuedAt: new Date().toISOString() });
+        }
+      })
+      .catch(() => {});
   }
 
   return (
@@ -150,7 +159,8 @@ export default function BootcampCampPage() {
         {camp.blurb}
       </p>
       <p className="mt-2 font-mono text-xs" style={{ color: "var(--ink-faint)" }}>
-        {passedCount}/{skills.length} chapter quizzes passed · pass them all to earn your {camp.certName} certificate ·{" "}
+        {passedCount}/{skills.length} quizzes passed · {labsDoneCount}/{skills.length} labs completed — finish every
+        chapter quiz and VM lab to unlock your {camp.certName} certificate ·{" "}
         <Link href="/bootcamp" className="underline">switch bootcamp</Link>
       </p>
 
@@ -166,7 +176,7 @@ export default function BootcampCampPage() {
             Awarded to{" "}
             <span className="font-semibold" style={{ color: "var(--ink)" }}>{email ?? "you"}</span>
             <br />
-            for completing all {skills.length} chapters of the {camp.title}.
+            for completing all {skills.length} chapters and hands-on labs of the {camp.title}.
           </div>
           <div className="mt-4 font-mono text-[11px]" style={{ color: "var(--ink-faint)" }}>
             {certificate.code} · issued {formatDate(certificate.issuedAt)}
