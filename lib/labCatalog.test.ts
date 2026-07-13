@@ -21,7 +21,7 @@ const catalogOf = (n: number): LabBrief[] =>
   Array.from({ length: n }, (_, i) => validLab({ id: `lab-${i}`, engine: i % 2 === 0 ? "wiring" : "fortigate" }));
 
 describe("buildLabCatalogMessages", () => {
-  it("asks for 5-10 labs as a JSON array with both engines", () => {
+  it("asks for 8-14 labs as a JSON array covering the engines", () => {
     const msgs = buildLabCatalogMessages();
     expect(msgs[0].role).toBe("system");
     expect(msgs[0].content).toContain('"wiring"');
@@ -36,8 +36,8 @@ describe("buildLabCatalogMessages", () => {
 
 describe("parseLabCatalog", () => {
   it("parses a valid catalog", () => {
-    const labs = parseLabCatalog(JSON.stringify(catalogOf(6)));
-    expect(labs).toHaveLength(6);
+    const labs = parseLabCatalog(JSON.stringify(catalogOf(9)));
+    expect(labs).toHaveLength(9);
     expect(labs[1].engine).toBe("fortigate");
   });
 
@@ -46,19 +46,19 @@ describe("parseLabCatalog", () => {
   });
 
   it("caps oversized catalogs at the maximum", () => {
-    expect(parseLabCatalog(JSON.stringify(catalogOf(14)))).toHaveLength(MAX_CATALOG_LABS);
+    expect(parseLabCatalog(JSON.stringify(catalogOf(18)))).toHaveLength(MAX_CATALOG_LABS);
   });
 
   it("rejects an invalid engine", () => {
-    const bad = catalogOf(5);
+    const bad = catalogOf(9);
     (bad[2] as unknown as Record<string, unknown>).engine = "cisco";
     expect(() => parseLabCatalog(JSON.stringify(bad))).toThrow(/engine/);
   });
 
   it("de-duplicates repeated ids", () => {
-    const dupes = catalogOf(5).map((l) => ({ ...l, id: "same-id" }));
+    const dupes = catalogOf(9).map((l) => ({ ...l, id: "same-id" }));
     const labs = parseLabCatalog(JSON.stringify(dupes));
-    expect(new Set(labs.map((l) => l.id)).size).toBe(5);
+    expect(new Set(labs.map((l) => l.id)).size).toBe(9);
   });
 
   it("rejects payloads with no JSON array", () => {
@@ -67,7 +67,7 @@ describe("parseLabCatalog", () => {
 });
 
 describe("fallback catalog", () => {
-  it("is a valid catalog within the 5-10 range covering all engines", () => {
+  it("is a valid catalog within the 8-14 range covering all engines", () => {
     expect(FALLBACK_LAB_CATALOG.length).toBeGreaterThanOrEqual(MIN_CATALOG_LABS);
     expect(FALLBACK_LAB_CATALOG.length).toBeLessThanOrEqual(MAX_CATALOG_LABS);
     expect(() => parseLabCatalog(JSON.stringify(FALLBACK_LAB_CATALOG))).not.toThrow();

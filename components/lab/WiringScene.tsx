@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, Text, GizmoHelper, GizmoViewport, Grid } from "@react-three/drei";
+import { OrbitControls, Text, Billboard, GizmoHelper, GizmoViewport, Grid } from "@react-three/drei";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import * as THREE from "three";
 import type { WiringScenario, RequiredConnection, PortRef, LabDevice, DeviceKind } from "@/lib/wiringLab";
@@ -110,7 +110,16 @@ function KeyControls({ controls }: { controls: React.MutableRefObject<OrbitContr
       c.listenToKeyEvents(el);
     }
     el.focus();
-    return () => { c?.stopListenToKeyEvents?.(); };
+    // Re-grab focus whenever the pointer returns to the 3D view, so arrows keep
+    // working after the trainee has been typing in the console or tutor box.
+    const refocus = () => el.focus();
+    el.addEventListener("pointerenter", refocus);
+    el.addEventListener("pointerdown", refocus);
+    return () => {
+      el.removeEventListener("pointerenter", refocus);
+      el.removeEventListener("pointerdown", refocus);
+      c?.stopListenToKeyEvents?.();
+    };
   }, [gl, controls]);
   return null;
 }
@@ -400,9 +409,11 @@ function PortSocket({
         <sphereGeometry args={[0.045, 10, 10]} />
         <meshStandardMaterial color="#475569" emissive="#1e293b" />
       </mesh>
-      <Text position={[0, -0.22, 0.03]} fontSize={0.1} color="#cbd5e1" anchorX="center" outlineWidth={0.004} outlineColor="#020617">
-        {label}
-      </Text>
+      <Billboard position={[0, -0.24, 0.06]}>
+        <Text fontSize={0.11} color="#cbd5e1" anchorX="center" anchorY="middle" outlineWidth={0.006} outlineColor="#020617">
+          {label}
+        </Text>
+      </Billboard>
     </group>
   );
 }
@@ -506,16 +517,21 @@ export default function WiringScene({
         return (
           <group key={d.id} position={[x, y, z]}>
             <DeviceChassis device={d} />
-            <Text
-              position={[0, profileOf(d.kind).h + 0.5, 0]}
-              fontSize={0.22}
-              color="#e2e8f0"
-              anchorX="center"
-              outlineWidth={0.006}
-              outlineColor="#020617"
-            >
-              {d.name}
-            </Text>
+            {/* Billboarded so the name always faces the camera; raised above antennas. */}
+            <Billboard position={[0, profileOf(d.kind).h + (d.kind === "router" || d.kind === "modem" ? 1.15 : 0.6), 0]}>
+              <Text
+                fontSize={0.26}
+                color="#e2e8f0"
+                anchorX="center"
+                anchorY="middle"
+                maxWidth={CELL_W - 0.4}
+                textAlign="center"
+                outlineWidth={0.012}
+                outlineColor="#020617"
+              >
+                {d.name}
+              </Text>
+            </Billboard>
             {d.ports.map((pt, pi) => {
               const key = `${d.id}:${pt.id}`;
               const world = portPos(d, di, total, pi);

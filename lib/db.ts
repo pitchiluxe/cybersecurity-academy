@@ -50,6 +50,14 @@ const SCHEMA = `
     grade INTEGER NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
+  CREATE TABLE IF NOT EXISTS exams (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    track TEXT NOT NULL,
+    content_json TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (user_id, track)
+  );
 `;
 
 function getClient(): Client {
@@ -157,6 +165,29 @@ export async function saveCourse(userId: number, track: string, contentJson: str
   ]);
   const row = await getCourseRow(userId, track);
   return row!.id;
+}
+
+export async function getExamRow(userId: number, track: string): Promise<{ id: number; content_json: string } | undefined> {
+  const rs = await exec("SELECT id, content_json FROM exams WHERE user_id = ? AND track = ?", [userId, track]);
+  const r = rs.rows[0];
+  return r ? { id: num(r.id), content_json: String(r.content_json) } : undefined;
+}
+
+// Same first-write-wins race handling as saveCourse.
+export async function saveExam(userId: number, track: string, contentJson: string): Promise<void> {
+  await exec("INSERT INTO exams (user_id, track, content_json) VALUES (?, ?, ?) ON CONFLICT(user_id, track) DO NOTHING", [
+    userId,
+    track,
+    contentJson,
+  ]);
+}
+
+export async function updateExamJson(userId: number, track: string, contentJson: string): Promise<void> {
+  await exec("UPDATE exams SET content_json = ? WHERE user_id = ? AND track = ?", [contentJson, userId, track]);
+}
+
+export async function deleteExam(userId: number, track: string): Promise<void> {
+  await exec("DELETE FROM exams WHERE user_id = ? AND track = ?", [userId, track]);
 }
 
 export async function getPassedModuleIndexes(courseId: number): Promise<number[]> {

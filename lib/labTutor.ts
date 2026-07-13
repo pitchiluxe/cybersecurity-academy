@@ -41,6 +41,33 @@ const ENGINE_DESCRIPTIONS: Record<string, string> = {
   router: "a Cisco router deployment lab — the trainee cables the unit in 3D, then configures it in the IOS-XE CLI",
 };
 
+/**
+ * One-shot hint for the CLI phase of a device lab: given the open tasks and the
+ * trainee's recent console activity, nudge them toward the next command.
+ */
+export function buildLabHintMessages(
+  context: LabTutorContext,
+  openTasks: string[],
+  recentConsole: { command: string; output: string }[]
+): ChatMessage[] {
+  const engineLine = ENGINE_DESCRIPTIONS[context.engine] ?? "a hands-on IT lab";
+  const consoleBlock =
+    recentConsole.length > 0
+      ? `\nRecent console activity (most recent last):\n${recentConsole
+          .map((h) => `> ${h.command}\n${h.output.slice(0, 300)}`)
+          .join("\n")}`
+      : "\nThe trainee has not typed anything yet.";
+  const system = `You are a senior network engineer giving a single hint to an IT trainee working in ${engineLine}.
+Lab: ${context.title} — ${context.backstory}
+Open (not yet completed) tasks:
+${openTasks.map((t, i) => `${i + 1}. ${t}`).join("\n")}${consoleBlock}
+Give ONE hint for the next open task: one or two sentences of reasoning, then the exact command (or the first command of the sequence) to type. Plain text only, no markdown, under 60 words.`;
+  return [
+    { role: "system", content: system },
+    { role: "user", content: "Give me a hint for the next step." },
+  ];
+}
+
 export function buildLabTutorMessages(context: LabTutorContext, turns: LabTutorTurn[]): ChatMessage[] {
   const engineLine = ENGINE_DESCRIPTIONS[context.engine] ?? "a hands-on IT lab";
   const stepsList = context.steps.map((s, i) => `${i + 1}. ${s}`).join("\n");

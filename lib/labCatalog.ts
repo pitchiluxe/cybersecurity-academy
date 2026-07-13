@@ -14,8 +14,8 @@ export interface LabBrief {
 }
 
 const LAB_ENGINES: LabEngine[] = ["wiring", "fortigate", "router"];
-export const MIN_CATALOG_LABS = 5;
-export const MAX_CATALOG_LABS = 10;
+export const MIN_CATALOG_LABS = 8;
+export const MAX_CATALOG_LABS = 14;
 
 export function buildLabCatalogMessages(): ChatMessage[] {
   const count = MIN_CATALOG_LABS + Math.floor(Math.random() * (MAX_CATALOG_LABS - MIN_CATALOG_LABS + 1));

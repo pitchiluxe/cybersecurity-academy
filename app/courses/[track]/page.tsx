@@ -351,6 +351,18 @@ export default function CourseTrackPage() {
             <button onClick={generatePractice} disabled={practiceBusy} className="btn-ghost mt-3">
               {practiceBusy ? "Generating…" : practice ? "Regenerate practice tickets" : "Generate practice tickets"}
             </button>
+
+            <hr className="my-6" style={{ borderColor: "var(--border)" }} />
+            <h3 className="font-display text-base font-bold" style={{ color: "var(--ink)" }}>
+              Final exam
+            </h3>
+            <p className="mt-1 text-sm" style={{ color: "var(--ink-muted)" }}>
+              A full-length practice exam modeled on the real certification: the same number of questions,
+              real exam domains, and graded on the vendor&apos;s actual score scale and pass mark.
+            </p>
+            <Link href={`/courses/${track}/exam`} className="btn-primary mt-3 inline-block">
+              Take the final exam →
+            </Link>
           </article>
 
           <aside className={`panel flex h-[70vh] flex-col p-4 ${tutorOpen ? "" : "hidden lg:flex"}`}>

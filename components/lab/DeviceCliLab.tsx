@@ -56,6 +56,8 @@ export default function DeviceCliLab({ config }: { config: DeviceCliLabConfig })
   const [running, setRunning] = useState(false);
   const [complete, setComplete] = useState(false);
   const [recorded, setRecorded] = useState(false);
+  const [hints, setHints] = useState(0);
+  const [hinting, setHinting] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -91,7 +93,7 @@ export default function DeviceCliLab({ config }: { config: DeviceCliLabConfig })
   );
   const madeKeys = useMemo(() => new Set(made.map(requiredKey)), [made]);
   const wired = wiringScenario ? isComplete(wiringScenario, madeKeys) : false;
-  const score = scoreFortigateLab(wrong, 0);
+  const score = scoreFortigateLab(wrong, hints);
 
   function handleAttempt(a: PortRef, b: PortRef) {
     if (!wiringScenario || wired) return;
@@ -128,9 +130,37 @@ export default function DeviceCliLab({ config }: { config: DeviceCliLabConfig })
         setComplete(true);
         fetch("/api/lab/complete", {
           method: "POST",
-          body: JSON.stringify({ kind: config.completeKind, score: scoreFortigateLab(wrong, 0) }),
+          body: JSON.stringify({ kind: config.completeKind, score: scoreFortigateLab(wrong, hints) }),
         }).then((r) => setRecorded(r.ok));
       }
+    }
+  }
+
+  async function askHint() {
+    if (!scenario || hinting || complete) return;
+    setHinting(true);
+    const openTasks = scenario.tasks.filter((t) => !doneTasks.includes(t.id)).map((t) => t.instruction);
+    const res = await fetch("/api/lab/hint", {
+      method: "POST",
+      body: JSON.stringify({
+        context: {
+          engine: config.completeKind,
+          title: scenario.title,
+          backstory: scenario.backstory,
+          steps: [...scenario.wiring].sort((x, y) => x.step - y.step).map((s) => s.instruction),
+          tasks: scenario.tasks.map((t) => t.instruction),
+        },
+        openTasks,
+        recentConsole: history.slice(-3),
+      }),
+    });
+    const body = await res.json().catch(() => ({}));
+    setHinting(false);
+    if (res.ok) {
+      setHints((h) => h + 1);
+      setHistory((prev) => [...prev, { command: "(hint)", output: `💡 ${body.hint}` }]);
+    } else {
+      setHistory((prev) => [...prev, { command: "(hint)", output: `[hint unavailable] ${body.error ?? "try again"}` }]);
     }
   }
 
@@ -179,7 +209,7 @@ export default function DeviceCliLab({ config }: { config: DeviceCliLabConfig })
                 ))}
             </ol>
             <div className="mt-2 flex justify-between font-mono text-[11px]" style={{ color: "var(--ink-faint)" }}>
-              <span>Wrong cables: {wrong}</span>
+              <span>Wrong cables: {wrong} · Hints: {hints}</span>
               <span>Score: {score}</span>
             </div>
             {complete && (
@@ -208,8 +238,18 @@ export default function DeviceCliLab({ config }: { config: DeviceCliLabConfig })
 
       {/* Full-width console row — the CLI needs room for commands and multi-line output. */}
       <div className="mt-4 flex h-[340px] flex-col rounded-xl border" style={{ borderColor: "#1e293b", background: "#020617" }}>
-        <div className="border-b px-3 py-1.5 font-mono text-[11px]" style={{ borderColor: "#1e293b", color: "#64748b" }}>
-          {config.consoleName} {wired ? "— connected" : `— ${config.lockedHint}`}
+        <div className="flex items-center justify-between border-b px-3 py-1.5 font-mono text-[11px]" style={{ borderColor: "#1e293b", color: "#64748b" }}>
+          <span>{config.consoleName} {wired ? "— connected" : `— ${config.lockedHint}`}</span>
+          <button
+            type="button"
+            onClick={askHint}
+            disabled={!wired || hinting || complete}
+            className="rounded border px-2 py-0.5 font-mono text-[11px] transition-colors disabled:opacity-40"
+            style={{ borderColor: "#334155", color: "#fbbf24", cursor: !wired || hinting || complete ? "default" : "pointer" }}
+            title="Ask the AI for the next step. Each hint costs 5 points."
+          >
+            {hinting ? "thinking…" : "💡 hint (−5 pts)"}
+          </button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-3 font-mono text-[13px] leading-relaxed" style={{ color: "#cbd5e1" }}>
           {!wired && <div style={{ color: "#64748b" }}>Console locked until the unit is cabled.</div>}
