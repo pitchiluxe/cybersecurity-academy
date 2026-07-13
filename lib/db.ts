@@ -207,6 +207,12 @@ export async function saveBootcampChapter(userId: number, skill: string, content
   ]);
 }
 
+// Temporary diagnostics helper for the hosted settings investigation.
+export async function countRows(table: "users" | "app_settings"): Promise<number> {
+  const rs = await exec(`SELECT count(*) AS n FROM ${table}`);
+  return num(rs.rows[0].n);
+}
+
 // App settings live in the DB so they persist on hosts with read-only
 // filesystems (Vercel); the singleton row keeps it one source of truth.
 export async function getAppSettingsJson(): Promise<string | undefined> {
