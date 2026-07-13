@@ -209,11 +209,12 @@ export async function saveBootcampChapter(userId: number, skill: string, content
 
 // App settings live in the DB so they persist on hosts with read-only
 // filesystems (Vercel); the singleton row keeps it one source of truth.
-// NOTE: the id filter must be a bound parameter — Turso's hosted server
-// fails to match `WHERE id = 1` written as a literal (0 rows) while the
-// parameterized form matches; every query in this file binds values.
+// NOTE: deliberately no WHERE clause. On the hosted Turso runtime, filtering
+// this table by id (literal or bound) intermittently matched zero rows while
+// the unfiltered SELECT always sees the row; it is a one-row table, so the
+// filter buys nothing. Do not "clean this up" without testing on Vercel.
 export async function getAppSettingsJson(): Promise<string | undefined> {
-  const rs = await exec("SELECT content_json FROM app_settings WHERE id = ?", [1]);
+  const rs = await exec("SELECT content_json FROM app_settings ORDER BY id LIMIT 1");
   const r = rs.rows[0];
   return r ? String(r.content_json) : undefined;
 }
