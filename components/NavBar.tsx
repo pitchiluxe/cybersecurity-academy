@@ -82,7 +82,7 @@ export function NavBar() {
             CA
           </span>
           <span className="flex min-w-0 flex-col leading-tight">
-            <span className="font-display text-sm font-bold" style={{ color: "var(--ink)" }}>
+            <span className="font-display whitespace-nowrap text-sm font-bold" style={{ color: "var(--ink)" }}>
               Cybersecurity Academy
             </span>
             <span className="hidden font-mono text-[10px] uppercase tracking-widest sm:block" style={{ color: "var(--ink-faint)" }}>
@@ -94,7 +94,7 @@ export function NavBar() {
         {/* Desktop cluster */}
         <div className="hidden items-center gap-3 md:flex lg:gap-4">
           <span
-            className="status-dot-wrap font-mono text-[11px] uppercase tracking-wide"
+            className="status-dot-wrap whitespace-nowrap font-mono text-[11px] uppercase tracking-wide"
             style={{ color: "var(--ink-muted)" }}
             title={onlineTitle}
           >
@@ -124,21 +124,14 @@ export function NavBar() {
             </svg>
           </Link>
           {email && (
-            <>
-              <span
-                className="hidden max-w-[180px] truncate rounded-full border px-3 py-1 font-mono text-[11px] lg:inline-block"
-                style={{ color: "var(--ink-muted)", borderColor: "var(--border)", background: "var(--surface-2)" }}
-              >
-                {email}
-              </span>
-              <button
-                onClick={handleLogout}
-                className="cursor-pointer rounded-lg border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wide transition-colors duration-200"
-                style={{ color: "var(--ink-muted)", borderColor: "var(--border)", background: "transparent" }}
-              >
-                Log out
-              </button>
-            </>
+            <button
+              onClick={handleLogout}
+              title={`Signed in as ${email}`}
+              className="cursor-pointer whitespace-nowrap rounded-lg border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wide transition-colors duration-200"
+              style={{ color: "var(--ink-muted)", borderColor: "var(--border)", background: "transparent" }}
+            >
+              Log out
+            </button>
           )}
         </div>
 
