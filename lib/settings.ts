@@ -66,15 +66,24 @@ function readSettingsFile(): Partial<AppSettings> | null {
  * one-time migration source. Jest never touches either store so unit tests
  * stay deterministic against env vars alone.
  */
+/** Last error swallowed while reading settings from the DB — surfaced by /api/settings?debug=1. */
+export let lastSettingsReadError: string | null = null;
+
 export async function getSettings(): Promise<AppSettings> {
   const defaults = getDefaultSettings();
   if (process.env.NODE_ENV === "test") return defaults;
 
-  try {
-    const raw = await getAppSettingsJson();
-    if (raw) return mergeSaved(defaults, JSON.parse(raw) as Partial<AppSettings>);
-  } catch {
-    /* DB unreachable — fall back to the local file below */
+  // Two attempts: the schema bootstrap can fail transiently on a cold start,
+  // and its memoized promise resets itself for a retry.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const raw = await getAppSettingsJson();
+      lastSettingsReadError = null;
+      if (raw) return mergeSaved(defaults, JSON.parse(raw) as Partial<AppSettings>);
+      break; // no row saved yet — fall through to file/defaults
+    } catch (err) {
+      lastSettingsReadError = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+    }
   }
 
   const fromFile = readSettingsFile();
