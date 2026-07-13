@@ -81,6 +81,16 @@ export default function SettingsPage() {
     loadModels().catch(() => setModels({ openrouter: [], ollama: { available: false, models: [] } }));
   }, []);
 
+  // While Ollama is unreachable, quietly re-check every 10s so the "Not
+  // running" badge clears itself the moment the app is started.
+  useEffect(() => {
+    if (!models || models.ollama.available) return;
+    const id = setInterval(() => {
+      loadModels().catch(() => {});
+    }, 10_000);
+    return () => clearInterval(id);
+  }, [models]);
+
   async function save(update: Partial<Settings>) {
     if (!settings) return;
     setSaving(true);
@@ -367,9 +377,14 @@ export default function SettingsPage() {
           <span className="font-mono">{settings.ollamaModel || "none"}</span>
         </p>
         {models && !models.ollama.available ? (
-          <p className="text-sm" style={{ color: "var(--warn)" }}>
-            Ollama isn&apos;t reachable. Start the Ollama app, then reload this page.
-          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-sm" style={{ color: "var(--warn)" }}>
+              Ollama isn&apos;t reachable. Start the Ollama app — this page re-checks automatically.
+            </p>
+            <button type="button" className="btn-ghost text-xs" onClick={() => loadModels().catch(() => {})}>
+              Check again now
+            </button>
+          </div>
         ) : (
           <select
             className="field-input w-full"
