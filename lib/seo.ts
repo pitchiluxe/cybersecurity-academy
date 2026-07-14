@@ -1,6 +1,6 @@
 // Shared SEO constants and structured data. SITE_URL drives canonical URLs,
 // Open Graph, sitemap, and robots; set NEXT_PUBLIC_SITE_URL in production.
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://techbench-academy.vercel.app").replace(/\/$/, "");
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://cybersecurity-academy.vercel.app").replace(/\/$/, "");
 export const SITE_NAME = "Cybersecurity Academy";
 export const SITE_TAGLINE = "Your training lab for real IT support";
 export const SITE_DESCRIPTION =

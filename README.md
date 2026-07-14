@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="app/icon.png" width="96" height="96" alt="TechBench Academy logo" />
+<img src="app/icon.png" width="96" height="96" alt="Cybersecurity Academy logo" />
 
-# TechBench Academy
+# Cybersecurity Academy
 
 ### Your training lab for real IT support
 
@@ -23,7 +23,7 @@ certificates — all graded against a rubric.
 
 ## What is this?
 
-TechBench Academy turns "learning IT support" into an actual shift on the desk. Instead of
+Cybersecurity Academy turns "learning IT support" into an actual shift on the desk. Instead of
 reading about DNS or a dead switch uplink, you **do the job**: an AI role-plays the frustrated
 end-user, you ask questions, run `/run ipconfig /all`-style diagnostics against a simulated
 machine, and close the ticket with resolution notes that get graded 0–100 on a real support
@@ -35,7 +35,7 @@ certifications, hands-on **3D equipment labs**, simulated **virtual machines**, 
 **certificates**.
 
 <div align="center">
-  <img src="docs/screenshots/01-login.png" width="900" alt="TechBench Academy — landing page" />
+  <img src="docs/screenshots/01-login.png" width="900" alt="Cybersecurity Academy — landing page" />
 </div>
 
 ---
@@ -138,8 +138,8 @@ Five full themes, switchable from **Settings → Appearance** and saved to your 
 ## Getting started
 
 ```bash
-git clone https://github.com/pitchiluxe/techbench-academy.git
-cd techbench-academy
+git clone https://github.com/pitchiluxe/cybersecurity-academy.git
+cd cybersecurity-academy
 npm install
 ```
 
@@ -199,9 +199,9 @@ return **500** ("Something went wrong").
 ```bash
 curl -sSfL https://get.tur.so/install.sh | bash   # or: brew install tursodatabase/tap/turso
 turso auth signup
-turso db create techbench-academy
-turso db show techbench-academy --url             # → TURSO_DATABASE_URL (libsql://…)
-turso db tokens create techbench-academy          # → TURSO_AUTH_TOKEN
+turso db create cybersecurity-academy
+turso db show cybersecurity-academy --url             # → TURSO_DATABASE_URL (libsql://…)
+turso db tokens create cybersecurity-academy          # → TURSO_AUTH_TOKEN
 ```
 
 > Prefer no CLI? Add the **Turso** integration from the Vercel Marketplace — it injects
@@ -214,7 +214,7 @@ Import the repo at [vercel.com/new](https://vercel.com/new), then add these unde
 
 | Variable | Required | Value |
 |---|---|---|
-| `TURSO_DATABASE_URL` | ✅ | `libsql://techbench-academy-….turso.io` |
+| `TURSO_DATABASE_URL` | ✅ | `libsql://cybersecurity-academy-….turso.io` |
 | `TURSO_AUTH_TOKEN` | ✅ | token from step 1 |
 | `AUTH_SECRET` | ✅ | any long random string (session signing) |
 | `ANTHROPIC_BASE_URL` | ✅ | `https://openrouter.ai/api` |
