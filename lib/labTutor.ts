@@ -39,6 +39,7 @@ const ENGINE_DESCRIPTIONS: Record<string, string> = {
   wiring: "a 3D network cabling lab — the trainee clicks ports to run cables between devices",
   fortigate: "a FortiGate deployment lab — the trainee cables the unit in 3D, then configures it in the FortiOS CLI",
   router: "a Cisco router deployment lab — the trainee cables the unit in 3D, then configures it in the IOS-XE CLI",
+  hardware: "a 3D PC hardware assembly lab — the trainee picks components (CPU, RAM, drives, GPU, power) from a tray and installs each into the right motherboard slot or drive bay",
   bootcamp: "a CCNA bootcamp chapter — the trainee studies the lesson, takes a quiz, and troubleshoots a simulated machine for this skill",
 };
 

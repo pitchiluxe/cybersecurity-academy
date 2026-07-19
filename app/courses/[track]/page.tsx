@@ -32,6 +32,7 @@ interface QuizResult {
 }
 
 const TRACK_LABS: Record<string, { href: string; label: string }> = {
+  aplus: { href: "/labs/hardware", label: "Open the 3D hardware lab" },
   networkplus: { href: "/labs/wiring", label: "Open the 3D wiring lab" },
   ccna: { href: "/labs/wiring", label: "Open the 3D wiring lab" },
   ccnpsec: { href: "/labs/fortigate", label: "Open the FortiGate lab" },

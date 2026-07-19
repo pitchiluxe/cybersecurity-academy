@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { notFound, useParams } from "next/navigation";
 import Link from "next/link";
+import type { ScenarioSeed } from "@/lib/types";
 import {
   getBootcamp, isBootcampId, skillsForBootcamp, BOOTCAMP_PASS_SCORE,
   type BootcampSkill, type ClientBootcampChapter,
@@ -39,6 +40,8 @@ export default function BootcampCampPage() {
 
   const [expanded, setExpanded] = useState<string | null>(null);
   const [chapters, setChapters] = useState<Record<string, ClientBootcampChapter>>({});
+  // AI lab seed generated with each chapter, so "Launch VM lab" matches the lesson.
+  const [labSeeds, setLabSeeds] = useState<Record<string, ScenarioSeed>>({});
   const [loading, setLoading] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [quiz, setQuiz] = useState<Record<string, QuizState>>({});
@@ -75,8 +78,10 @@ export default function BootcampCampPage() {
   const passedCount = skills.filter((s) => (progress[s.id]?.quiz_score ?? 0) >= BOOTCAMP_PASS_SCORE).length;
   const labsDoneCount = skills.filter((s) => !!progress[s.id]?.lab_done).length;
 
-  async function openChapter(skill: BootcampSkill) {
-    if (chapters[skill.id] || loading) return;
+  // Every call generates a brand-new AI chapter: fresh lesson, fresh randomized
+  // quiz, fresh lesson-matched VM lab. `fresh` re-rolls an already-open chapter.
+  async function openChapter(skill: BootcampSkill, fresh = false) {
+    if ((chapters[skill.id] && !fresh) || loading) return;
     setLoading(skill.id);
     setErrors((prev) => ({ ...prev, [skill.id]: "" }));
     const res = await fetch("/api/bootcamp/chapter", {
@@ -90,6 +95,7 @@ export default function BootcampCampPage() {
       return;
     }
     setChapters((prev) => ({ ...prev, [skill.id]: body.chapter }));
+    if (body.labSeed) setLabSeeds((prev) => ({ ...prev, [skill.id]: body.labSeed }));
     setQuiz((prev) => ({ ...prev, [skill.id]: { answers: {}, result: null, submitting: false } }));
   }
 
@@ -244,9 +250,24 @@ export default function BootcampCampPage() {
                         {loading === skill.id ? "Writing your chapter…" : "📖 Open chapter (AI lesson + quiz)"}
                       </button>
                     )}
-                    <button className="btn-ghost text-sm" onClick={() => setVmSkill(skill)}>
-                      🖥️ Launch VM lab
-                    </button>
+                    {chapter && (
+                      <button className="btn-ghost text-sm" onClick={() => openChapter(skill, true)} disabled={loading !== null}>
+                        {loading === skill.id ? "Rewriting…" : "🎲 New lesson + quiz"}
+                      </button>
+                    )}
+                    {skill.labKind === "hardware" ? (
+                      <Link className="btn-ghost text-sm" href={`/labs/hardware?skill=${skill.id}`}>
+                        🔧 Launch 3D hardware lab
+                      </Link>
+                    ) : skill.labKind === "wiring" ? (
+                      <Link className="btn-ghost text-sm" href={`/labs/wiring?skill=${skill.id}`}>
+                        🔌 Launch 3D wiring lab
+                      </Link>
+                    ) : (
+                      <button className="btn-ghost text-sm" onClick={() => setVmSkill(skill)}>
+                        🖥️ Launch VM lab
+                      </button>
+                    )}
                   </div>
 
                   {err && (
@@ -355,7 +376,7 @@ export default function BootcampCampPage() {
 
       {vmSkill && (
         <VmOverlay
-          seed={vmSkill.labSeed}
+          seed={labSeeds[vmSkill.id] ?? vmSkill.labSeed}
           onClose={() => setVmSkill(null)}
           onResolved={() => handleLabResolved(vmSkill)}
         />

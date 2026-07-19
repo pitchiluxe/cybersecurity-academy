@@ -72,6 +72,6 @@ describe("fallback catalog", () => {
     expect(FALLBACK_LAB_CATALOG.length).toBeLessThanOrEqual(MAX_CATALOG_LABS);
     expect(() => parseLabCatalog(JSON.stringify(FALLBACK_LAB_CATALOG))).not.toThrow();
     const engines = new Set(FALLBACK_LAB_CATALOG.map((l) => l.engine));
-    expect(engines).toEqual(new Set(["wiring", "fortigate", "router"]));
+    expect(engines).toEqual(new Set(["wiring", "fortigate", "router", "hardware"]));
   });
 });

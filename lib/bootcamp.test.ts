@@ -10,6 +10,7 @@ import {
   buildBootcampChapterMessages,
   parseBootcampChapter,
   stripBootcampAnswers,
+  chapterLabSeed,
 } from "./bootcamp";
 import { isScenarioCategory } from "./scenarios";
 
@@ -55,6 +56,14 @@ describe("BOOTCAMP_SKILLS", () => {
     expect(isBootcampSkillId("s00")).toBe(true);
     expect(isBootcampSkillId("s99")).toBe(false);
   });
+
+  it("hands-on chapters use the matching 3D lab engine", () => {
+    expect(getBootcampSkill("ap-00")?.labKind).toBe("hardware");
+    expect(getBootcampSkill("ap-01")?.labKind).toBe("hardware");
+    expect(getBootcampSkill("net-01")?.labKind).toBe("wiring");
+    expect(getBootcampSkill("s03")?.labKind).toBe("wiring");
+    expect(getBootcampSkill("s10")?.labKind).toBeUndefined();
+  });
 });
 
 describe("chapter generation plumbing", () => {
@@ -67,10 +76,14 @@ describe("chapter generation plumbing", () => {
     ],
   };
 
-  it("prompt names the skill and demands JSON", () => {
+  it("prompt names the skill, demands JSON, and varies per call", () => {
     const msgs = buildBootcampChapterMessages(BOOTCAMP_SKILLS[12]);
     expect(msgs[0].content).toContain("VLANs & Trunking");
     expect(msgs[0].content).toContain('"quiz"');
+    expect(msgs[0].content).toContain('"lab"');
+    // The variation seed makes every generation request unique.
+    const again = buildBootcampChapterMessages(BOOTCAMP_SKILLS[12]);
+    expect(again[0].content).not.toBe(msgs[0].content);
   });
 
   it("parses a valid chapter and strips answers for the client", () => {
@@ -80,11 +93,50 @@ describe("chapter generation plumbing", () => {
     expect((client.quiz[0] as unknown as Record<string, unknown>).answerIndex).toBeUndefined();
   });
 
-  it("rejects a too-short lesson and bad quiz shapes", () => {
+  it("parses the chapter lab when present and builds a lesson-matched seed", () => {
+    const lab = {
+      os: "Windows 11",
+      device: "Front-desk PC",
+      detail: "New build on the bench",
+      rootCause: "One DDR4 stick is seated in the wrong channel, so the board falls back to single channel",
+      openingMessage: "The new PC feels way slower than the identical one next to it. Same parts, same everything.",
+    };
+    const chapter = parseBootcampChapter(JSON.stringify({ ...valid, lab }));
+    expect(chapter.lab?.rootCause).toContain("single channel");
+
+    const skill = getBootcampSkill("ap-00")!;
+    const seed = chapterLabSeed(skill, chapter);
+    expect(seed.rootCause).toBe(lab.rootCause);
+    expect(seed.environment.os).toBe("Windows 11");
+    expect(seed.persona).toEqual(skill.labSeed.persona);
+    // Without a generated lab we fall back to the hand-written seed.
+    expect(chapterLabSeed(skill, parseBootcampChapter(JSON.stringify(valid)))).toEqual(skill.labSeed);
+  });
+
+  it("repairs raw newlines inside JSON string literals", () => {
+    const withRawNewlines = JSON.stringify(valid).replace('"L', '"First line.\nSecond line. L');
+    expect(() => JSON.parse(withRawNewlines)).toThrow();
+    const chapter = parseBootcampChapter(withRawNewlines);
+    expect(chapter.lesson).toContain("First line.\nSecond line.");
+  });
+
+  it("repairs invalid Windows-path escapes in model JSON", () => {
+    const withBadEscapes = JSON.stringify(valid).replace('"L', '"Check C:\\\\Windows\\\\System32 first. L').replace(/\\\\/g, "\\");
+    // Sanity: the raw string is now invalid JSON.
+    expect(() => JSON.parse(withBadEscapes)).toThrow();
+    const chapter = parseBootcampChapter(withBadEscapes);
+    expect(chapter.lesson).toContain("C:\\Windows\\System32");
+  });
+
+  it("rejects a too-short lesson and salvages what it can from a drifting quiz", () => {
     expect(() => parseBootcampChapter(JSON.stringify({ ...valid, lesson: "short" }))).toThrow(/lesson/);
-    const badQuiz = { ...valid, quiz: [{ ...valid.quiz[0], choices: ["only", "two"] }, valid.quiz[1], valid.quiz[2]] };
-    expect(() => parseBootcampChapter(JSON.stringify(badQuiz))).toThrow(/choices/);
-    const badIdx = { ...valid, quiz: [{ ...valid.quiz[0], answerIndex: 7 }, valid.quiz[1], valid.quiz[2]] };
-    expect(() => parseBootcampChapter(JSON.stringify(badIdx))).toThrow(/answerIndex/);
+    // Malformed questions are skipped; the chapter fails only below 3 usable ones.
+    const badQuiz = { ...valid, quiz: [{ ...valid.quiz[0], choices: ["only-one"] }, valid.quiz[1], valid.quiz[2]] };
+    expect(() => parseBootcampChapter(JSON.stringify(badQuiz))).toThrow(/usable questions/);
+    const oneBad = { ...valid, quiz: [...valid.quiz, { ...valid.quiz[0], answerIndex: 7 }] };
+    expect(parseBootcampChapter(JSON.stringify(oneBad)).quiz).toHaveLength(3);
+    // Weak free models sometimes emit 3 choices — that's still a usable question.
+    const threeChoices = { ...valid, quiz: [{ ...valid.quiz[0], choices: ["a", "b", "c"], answerIndex: 2 }, valid.quiz[1], valid.quiz[2]] };
+    expect(parseBootcampChapter(JSON.stringify(threeChoices)).quiz[0].choices).toHaveLength(3);
   });
 });

@@ -198,13 +198,13 @@ export async function getBootcampChapterRow(userId: number, skill: string): Prom
   return r ? { id: num(r.id), content_json: String(r.content_json) } : undefined;
 }
 
-// Same first-write-wins race handling as saveCourse.
+// Last write wins: chapters regenerate on every open, and grading must run
+// against the version the trainee is currently reading.
 export async function saveBootcampChapter(userId: number, skill: string, contentJson: string): Promise<void> {
-  await exec("INSERT INTO bootcamp_chapters (user_id, skill, content_json) VALUES (?, ?, ?) ON CONFLICT(user_id, skill) DO NOTHING", [
-    userId,
-    skill,
-    contentJson,
-  ]);
+  await exec(
+    "INSERT INTO bootcamp_chapters (user_id, skill, content_json) VALUES (?, ?, ?) ON CONFLICT(user_id, skill) DO UPDATE SET content_json = excluded.content_json",
+    [userId, skill, contentJson]
+  );
 }
 
 // App settings live in the DB so they persist on hosts with read-only

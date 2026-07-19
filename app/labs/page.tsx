@@ -10,6 +10,7 @@ const ENGINE_LABELS: Record<LabBrief["engine"], string> = {
   wiring: "3D wiring",
   fortigate: "FortiGate CLI",
   router: "Router CLI",
+  hardware: "3D PC build",
 };
 
 export default function LabsPage() {

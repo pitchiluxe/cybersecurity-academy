@@ -7,6 +7,73 @@ export class ParseError extends Error {
   }
 }
 
+/**
+ * Models frequently emit Windows paths with single backslashes ("C:\Windows"),
+ * which are invalid JSON escapes; double any backslash not starting a valid one.
+ * Use as a second-chance parse after plain JSON.parse fails.
+ */
+export function repairInvalidJsonEscapes(json: string): string {
+  return json.replace(/\\(?!["\\/bfnrtu])/g, "\\\\");
+}
+
+/**
+ * Weak models also emit raw newlines/tabs INSIDE string literals, which JSON
+ * forbids ("Bad control character"). Escape control characters found while
+ * inside a string, leaving structural whitespace alone.
+ */
+export function repairControlCharsInStrings(json: string): string {
+  let out = "";
+  let inString = false;
+  let escaped = false;
+  for (const ch of json) {
+    if (!inString) {
+      if (ch === '"') inString = true;
+      out += ch;
+      continue;
+    }
+    if (escaped) {
+      out += ch;
+      escaped = false;
+      continue;
+    }
+    if (ch === "\\") {
+      out += ch;
+      escaped = true;
+    } else if (ch === '"') {
+      inString = false;
+      out += ch;
+    } else if (ch === "\n") {
+      out += "\\n";
+    } else if (ch === "\r") {
+      out += "\\r";
+    } else if (ch === "\t") {
+      out += "\\t";
+    } else {
+      out += ch;
+    }
+  }
+  return out;
+}
+
+/**
+ * Parse model-emitted JSON with second chances for the two most common
+ * defects (invalid Windows-path escapes, raw control chars in strings).
+ * Throws the final JSON.parse error if nothing salvages it.
+ */
+export function parseModelJson(json: string): unknown {
+  try {
+    return JSON.parse(json);
+  } catch {
+    /* fall through to repairs */
+  }
+  try {
+    return JSON.parse(repairInvalidJsonEscapes(json));
+  } catch {
+    /* fall through to the full repair chain */
+  }
+  return JSON.parse(repairControlCharsInStrings(repairInvalidJsonEscapes(json)));
+}
+
 export function extractJsonFromText(text: string): string {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
   const candidate = fenced ? fenced[1] : text;

@@ -1,7 +1,7 @@
 import type { ChatMessage } from "./openrouter";
 import { extractJsonArrayFromText, ParseError } from "./parsing";
 
-export type LabEngine = "wiring" | "fortigate" | "router";
+export type LabEngine = "wiring" | "fortigate" | "router" | "hardware";
 
 export interface LabBrief {
   id: string;
@@ -13,7 +13,7 @@ export interface LabBrief {
   brief: string;
 }
 
-const LAB_ENGINES: LabEngine[] = ["wiring", "fortigate", "router"];
+const LAB_ENGINES: LabEngine[] = ["wiring", "fortigate", "router", "hardware"];
 export const MIN_CATALOG_LABS = 8;
 export const MAX_CATALOG_LABS = 14;
 
@@ -23,14 +23,15 @@ export function buildLabCatalogMessages(topic?: string): ChatMessage[] {
     ? `\nThe trainee asked for jobs themed around: "${topic}". Bias industries, failure modes and briefs toward that theme.`
     : "";
   const system = `You are the lab dispatcher for an IT help-desk training platform. Invent ${count} distinct hands-on lab jobs a field technician could be sent on today.${topicLine}
-Each lab uses one of three engines:
+Each lab uses one of four engines:
 - "wiring": physical network cabling in 3D (modem, router, switch, patch panel, PC, AP, firewall). Jobs: buildouts, moves, outages, rollouts.
 - "fortigate": rack + cable a FortiGate, then configure it in the FortiOS CLI. Jobs: deployments, policies, NAT, web filtering, VPN, port-forwards.
 - "router": rack + cable a Cisco branch router, then configure it in the IOS CLI. Jobs: router turn-ups, replacements, DHCP/NAT rollouts, default-route repairs, inter-VLAN routing.
-Mix all three engines. Vary industry (clinic, school, warehouse, hotel, retail, law firm...), scale, and failure mode so no two labs feel alike.
+- "hardware": 3D PC bench build — install CPU, RAM, M.2/SATA drives, GPU and power on a motherboard. Jobs: new PC builds, RAM/GPU upgrades, HDD-to-SSD swaps.
+Mix all four engines. Vary industry (clinic, school, warehouse, hotel, retail, law firm...), scale, and failure mode so no two labs feel alike.
 Respond with ONLY a JSON array, no prose, no markdown fences, of exactly ${count} objects:
 [
-  { "id": "kebab-case-unique-id", "engine": "wiring|fortigate|router", "title": "short punchy title", "blurb": "2 sentences selling the job to the trainee", "tags": "2-3 relevant certs, dot-separated (e.g. Network+ · CCNA)", "brief": "one sentence describing the exact job, used to generate the lab" }
+  { "id": "kebab-case-unique-id", "engine": "wiring|fortigate|router|hardware", "title": "short punchy title", "blurb": "2 sentences selling the job to the trainee", "tags": "2-3 relevant certs, dot-separated (e.g. Network+ · CCNA)", "brief": "one sentence describing the exact job, used to generate the lab" }
 ]`;
   return [
     { role: "system", content: system },
@@ -160,6 +161,22 @@ export const FALLBACK_LAB_CATALOG: LabBrief[] = [
     blurb: "The site-to-site tunnel to HQ dropped after an ISP change and won't come back. Re-cable WAN and rebuild the IPsec config.",
     tags: "Fortinet FCP · CCNP Security",
     brief: "Repair a FortiGate IPsec site-to-site tunnel after a WAN change: fix WAN1 addressing and rebuild phase1/phase2.",
+  },
+  {
+    id: "frontdesk-pc-build",
+    engine: "hardware",
+    title: "Front-desk PC build-out",
+    blurb: "Reception's new workstation arrived as a bare board and a box of parts. Build it right: CPU, dual-channel RAM, NVMe boot drive, power.",
+    tags: "A+ · PC Hardware",
+    brief: "Assemble a new front-desk PC on the bench: seat the CPU, pair the DDR4 sticks for dual channel, install the NVMe boot drive, and connect ATX power.",
+  },
+  {
+    id: "warehouse-ssd-swap",
+    engine: "hardware",
+    title: "Dying HDD to SSD swap",
+    blurb: "The warehouse PC's spinning drive is throwing SMART warnings. Swap it for the new SSD before it dies with the shipping labels on it.",
+    tags: "A+ · Storage",
+    brief: "Replace a failing HDD with a 2.5-inch SATA SSD in the drive cage, add an NVMe scratch drive, and reconnect power — without reinstalling the dying drive.",
   },
   {
     id: "branch-router-turnup",

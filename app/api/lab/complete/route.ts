@@ -9,6 +9,7 @@ const KIND_CATEGORY: Record<string, ScenarioCategory> = {
   fortigate: "firewall",
   bootcamp: "network",
   router: "network",
+  hardware: "hardware",
 };
 
 export async function POST(request: Request) {

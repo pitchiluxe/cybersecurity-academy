@@ -1,6 +1,6 @@
 import type { ChatMessage } from "./openrouter";
 import type { ScenarioSeed } from "./types";
-import { extractJsonFromText, ParseError } from "./parsing";
+import { extractJsonFromText, parseModelJson, ParseError } from "./parsing";
 
 /**
  * Certification bootcamps. Each bootcamp is a certification-length study plan
@@ -18,6 +18,13 @@ export interface BootcampSkill {
   blurb: string;
   lessons: string[];
   labSeed: ScenarioSeed;
+  /**
+   * Which lab engine fits this chapter's material. "vm" (default) opens the
+   * simulated-machine overlay; "hardware" and "wiring" send the trainee to the
+   * matching 3D lab (/labs/<kind>?skill=<id>) so hands-on chapters get
+   * hands-on objects — motherboards for PC hardware, cables for cabling.
+   */
+  labKind?: "vm" | "hardware" | "wiring";
 }
 
 export interface BootcampMeta {
@@ -94,6 +101,7 @@ export const BOOTCAMP_SKILLS: BootcampSkill[] = [
     id: "s03", camp: "ccna", num: 3, title: "Standards & Cabling", week: "Weeks 2-3",
     blurb: "Network standards, bits vs bytes, copper and fiber characteristics, MDI-X, and diagramming the coffee house.",
     lessons: ["Why standards matter", "Speed: bits and bytes", "Copper cabling standards", "Straight-through, crossover, MDI-X", "Fiber optic spectrum", "Network diagrams", "Physically connecting the coffee house"],
+    labKind: "wiring",
     labSeed: seed(IOS_SW, "Catalyst 2960 — café IDF", "Uplink to the roastery over multimode fiber",
       "The fiber uplink interface is negotiated to 100Mb half-duplex because a duplex mismatch was hard-coded on one side",
       "The café-to-roastery link is crawling and the switch logs show late collisions on the uplink port."),
@@ -448,6 +456,7 @@ const NETPLUS_SKILLS: BootcampSkill[] = [
   { id: "net-01", camp: "netplus", num: 1, title: "Cabling & Connectors", week: "Week 2",
     blurb: "Copper and fiber media, connectors, transceivers, and physical-layer troubleshooting.",
     lessons: ["Copper categories & limits", "Fiber types & connectors", "Transceivers & mismatches", "Testing tools"],
+    labKind: "wiring",
     labSeed: seed(IOS_SW, "Catalyst 2960 — office IDF", "New 90m run to the warehouse desk",
       "The new drop is ~112m of Cat5e with a coupler in the ceiling — past spec, causing CRC errors and 10Mb negotiation",
       "The warehouse desk connects at 10Mb with constant errors. The electrician swears the new cable run is 'fine'.") },
@@ -505,12 +514,14 @@ const APLUS_SKILLS: BootcampSkill[] = [
   { id: "ap-00", camp: "aplus", num: 0, title: "PC Hardware", week: "Week 1",
     blurb: "Motherboards, CPUs, RAM, storage, power — and what failure looks like for each.",
     lessons: ["Motherboards & CPUs", "RAM types & channels", "Storage: HDD/SSD/NVMe", "PSUs & POST codes"],
+    labKind: "hardware",
     labSeed: seedAs("Rosa Mendez", "Front Desk", "Windows 11", "Desktop PC", "Random freezes reported",
       "One of two RAM sticks is failing — event logs show WHEA memory errors and the system crashes under load",
       "My PC freezes a few times a day, usually when I have lots of tabs open. IT already 'reinstalled everything' once.") },
   { id: "ap-01", camp: "aplus", num: 1, title: "Storage & File Systems", week: "Week 2",
     blurb: "Partitions, file systems, disk health, SMART, and recovering from disk problems.",
     lessons: ["Partitions & file systems", "SMART & disk health", "Disk management tools", "Backup basics"],
+    labKind: "hardware",
     labSeed: seedAs("Hank Miller", "Warehouse", "Windows 11", "Shared warehouse PC", "C: drive nearly full",
       "The disk is 99% full from an old user profile and a runaway log folder; SMART also shows pending sector warnings worth flagging",
       "This PC takes ten minutes to boot and yells about disk space nonstop. Can you clean it up and tell me if the drive is dying?") },
@@ -592,33 +603,66 @@ export interface BootcampQuizQuestion {
   answerIndex: number;
 }
 
+/** AI-generated machine fault for this chapter's VM lab, themed on the lesson. */
+export interface BootcampChapterLab {
+  os: string;
+  device: string;
+  detail: string;
+  rootCause: string;
+  openingMessage: string;
+}
+
 export interface BootcampChapter {
   lesson: string;
   quiz: BootcampQuizQuestion[];
+  /** Absent on chapters cached before lab generation shipped — the skill's static labSeed covers those. */
+  lab?: BootcampChapterLab;
 }
 
 export function buildBootcampChapterMessages(skill: BootcampSkill): ChatMessage[] {
   const camp = getBootcamp(skill.camp);
   const certName = camp?.certName ?? "certification";
   const storyLine = skill.camp === "ccna" ? " Tie examples back to the Castle Rysen Coffee storyline." : "";
+  // Fresh nonce per call: chapters regenerate on every open, and the token
+  // pushes the model toward new question angles instead of its favorite five.
+  const variation = Math.random().toString(36).slice(2, 8).toUpperCase();
   const system = `You are writing one chapter of a ${certName} bootcamp for an IT trainee.
 Chapter: Skill ${String(skill.num).padStart(2, "0")} — ${skill.title}. Scope: ${skill.blurb}
 Topics to cover, in order: ${skill.lessons.join("; ")}.
+Variation seed: ${variation}. This chapter is regenerated on every open — write a FRESH variation: pick different question angles, example values, device names and distractors than any previous version would use. Never reuse the most obvious textbook questions.
 Write:
 - "lesson": a 400-600 word lesson in plain text (short paragraphs, no markdown headers) that teaches these topics with concrete, exam-relevant examples (CLI commands, tool output, or real workflows where they fit).${storyLine}
-- "quiz": 5 multiple-choice questions on this chapter, ${certName} exam style, exactly 4 choices each, one correct.
+- "quiz": 5 multiple-choice questions on this chapter, ${certName} exam style, exactly 4 choices each, one correct. Vary the tested sub-topics and randomize which choice is correct.
+- "lab": a simulated-machine exercise for THIS chapter: a machine whose hidden fault can only be found and fixed using this chapter's material. Fields: "os" (e.g. Windows 11, Ubuntu 22.04, Cisco IOS-XE 17.9), "device" (what the machine is), "detail" (one line of environment context), "rootCause" (the specific hidden technical fault, precise enough to simulate), "openingMessage" (2-3 sentences from the affected user describing symptoms, no jargon, never naming the fault).
 Respond with ONLY a JSON object, no prose, no markdown fences:
-{ "lesson": "string", "quiz": [ { "question": "string", "choices": ["a","b","c","d"], "answerIndex": 0 } ] }`;
+{ "lesson": "string", "quiz": [ { "question": "string", "choices": ["a","b","c","d"], "answerIndex": 0 } ], "lab": { "os": "string", "device": "string", "detail": "string", "rootCause": "string", "openingMessage": "string" } }
+Strict JSON rules: double-quoted strings only (never backticks or triple quotes), newlines inside strings written as \\n, and the "lesson" value must be the full multi-paragraph lesson text itself, not a title.`;
   return [
     { role: "system", content: system },
     { role: "user", content: "Write the chapter now." },
   ];
 }
 
+/**
+ * Seed for the chapter's "Launch VM lab": the AI-generated, lesson-matched
+ * fault when the chapter has one, else the skill's hand-written fallback seed.
+ */
+export function chapterLabSeed(skill: BootcampSkill, chapter?: BootcampChapter | null): ScenarioSeed {
+  const lab = chapter?.lab;
+  if (!lab) return skill.labSeed;
+  return {
+    category: skill.labSeed.category,
+    persona: skill.labSeed.persona,
+    environment: { os: lab.os, device: lab.device, detail: lab.detail },
+    rootCause: lab.rootCause,
+    openingMessage: lab.openingMessage,
+  };
+}
+
 export function parseBootcampChapter(text: string): BootcampChapter {
   let raw: unknown;
   try {
-    raw = JSON.parse(extractJsonFromText(text));
+    raw = parseModelJson(extractJsonFromText(text));
   } catch (err) {
     if (err instanceof ParseError) throw err;
     throw new ParseError(`Failed to JSON.parse bootcamp chapter: ${(err as Error).message}`);
@@ -628,24 +672,45 @@ export function parseBootcampChapter(text: string): BootcampChapter {
   if (typeof obj.lesson !== "string" || obj.lesson.trim().length < 100) {
     throw new ParseError("Chapter lesson missing or too short");
   }
-  if (!Array.isArray(obj.quiz) || obj.quiz.length < 3) {
-    throw new ParseError("Chapter quiz must have at least 3 questions");
+  if (!Array.isArray(obj.quiz)) {
+    throw new ParseError("Chapter quiz must be an array");
   }
-  const quiz: BootcampQuizQuestion[] = obj.quiz.map((q, qi) => {
+  // The prompt asks for 5 questions of 4 choices, but weaker free models drift.
+  // Salvage every usable multiple-choice question; only give up when fewer
+  // than 3 survive — a shorter quiz beats no chapter at all.
+  const quiz: BootcampQuizQuestion[] = [];
+  for (const q of obj.quiz) {
+    if (typeof q !== "object" || q === null) continue;
     const question = q as Record<string, unknown>;
-    if (!Array.isArray(question.choices) || question.choices.length !== 4 || !question.choices.every((c) => typeof c === "string" && c.trim() !== "")) {
-      throw new ParseError(`quiz[${qi}].choices must be exactly 4 non-empty strings`);
-    }
+    if (typeof question.question !== "string" || question.question.trim() === "") continue;
+    const choices = question.choices;
+    if (!Array.isArray(choices) || choices.length < 2 || !choices.every((c) => typeof c === "string" && c.trim() !== "")) continue;
     const answerIndex = question.answerIndex;
-    if (typeof answerIndex !== "number" || !Number.isInteger(answerIndex) || answerIndex < 0 || answerIndex > 3) {
-      throw new ParseError(`quiz[${qi}].answerIndex out of range`);
+    if (typeof answerIndex !== "number" || !Number.isInteger(answerIndex) || answerIndex < 0 || answerIndex >= choices.length) continue;
+    quiz.push({ question: question.question, choices: choices as string[], answerIndex });
+  }
+  if (quiz.length < 3) {
+    throw new ParseError(`Chapter quiz must have at least 3 usable questions, got ${quiz.length}`);
+  }
+
+  // The lab is best-effort: older cached chapters and partial generations
+  // simply fall back to the skill's static labSeed.
+  let lab: BootcampChapterLab | undefined;
+  if (typeof obj.lab === "object" && obj.lab !== null) {
+    const l = obj.lab as Record<string, unknown>;
+    const fields = [l.os, l.device, l.detail, l.rootCause, l.openingMessage];
+    if (fields.every((f) => typeof f === "string" && f.trim() !== "")) {
+      lab = {
+        os: l.os as string,
+        device: l.device as string,
+        detail: l.detail as string,
+        rootCause: l.rootCause as string,
+        openingMessage: l.openingMessage as string,
+      };
     }
-    if (typeof question.question !== "string" || question.question.trim() === "") {
-      throw new ParseError(`quiz[${qi}].question missing`);
-    }
-    return { question: question.question, choices: question.choices as string[], answerIndex };
-  });
-  return { lesson: obj.lesson, quiz };
+  }
+
+  return { lesson: obj.lesson, quiz, lab };
 }
 
 export type ClientBootcampChapter = { lesson: string; quiz: { question: string; choices: string[] }[] };
